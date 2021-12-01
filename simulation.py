@@ -12,7 +12,7 @@ plt.figure(1)
 r = Robot()
 storeP = np.array([r.p])
 # Define desired pose to reach
-X_des = np.array([0,2,np.pi/2])
+X_des = np.array([0,4,np.pi])
 # Initialise some variables:
 error_i = 0
 prev_error = 0
@@ -46,20 +46,8 @@ for i in range(0,int(T/dt)):
     # Get the desired inputs for the joints and wheels:
     u = Q_dot_des[0:2]
     dq = Q_dot_des[2:4]
-   
     
-    phi_dot = (u[1] - u[0])/(2*r.h)
-    
-    
-    # Simulate forward motion with these desired commands:
-    X_dot = r.ForwardDynamics(u,dq,phi_dot)
-        
-    p_dot = X_dot[0:2]
-    theta_dot = X_dot[2]
-    
-    mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
 
-    
 # =============================================================================
 #     # Q_dot is the input (joints and wheels) states
 #     Q_dot = np.array([r.u[0],r.u[1],dq[i,0],dq[i,1]])
@@ -76,6 +64,14 @@ for i in range(0,int(T/dt)):
 
     
 ## SIMULATE MOVEMENT
+    # Simulate forward motion with these desired commands:
+    phi_dot = (u[1] - u[0])/(2*r.h)
+    X_dot = r.ForwardDynamics(u,dq,phi_dot)
+        
+    p_dot = X_dot[0:2]
+    theta_dot = X_dot[2]
+    
+    mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
     # Integrate numerically:
     mp = r.mp.copy()
     phi = r.phi
@@ -109,14 +105,21 @@ for i in range(0,int(T/dt)):
     
     p_joint_1 = r.p_joint_1 + dp_joint_1*dt
     
-    r.Update(mp,phi,p,theta,q,dq,u,p_joint_1)
+
     
 # =============================================================================
 #     R = r.rotationMatrix(phi)
 #     p_joint_1 = mp + np.dot(R,np.array([(r.l[0]*np.cos(q[0])), r.l[0]*np.sin(q[0])]))
 # =============================================================================
     
-    
+    # position p based on forward kinematics:
+# =============================================================================
+#     p =  mp + np.dot(R,np.array([r.l[0]*np.cos(r.q[0]) + r.l[1]*np.cos(r.q[0]+r.q[1]),
+#                       r.l[0]*np.sin(r.q[0]) + r.l[1]*np.sin(r.
+#                       q[0]+r.q[1])]))
+#     
+# =============================================================================
+    r.Update(mp,phi,p,theta,q,dq,u,p_joint_1) 
 
     
     storeP = np.append(storeP,[p],axis=0)
