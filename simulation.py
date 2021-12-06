@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 # Total time in seconds:
 T = 1
-dt = 0.01 # time step
+dt = 0.001 # time step
 
 plt.figure(1)
 
@@ -12,7 +12,7 @@ plt.figure(1)
 r = Robot()
 storeP = np.array([r.p])
 # Define desired pose to reach
-X_des = np.array([0,2,np.pi/2])
+X_des = np.array([-2,4,np.pi/2])
 # Initialise some variables:
 error_i = 0
 prev_error = 0
@@ -22,9 +22,9 @@ for i in range(0,int(T/dt)):
 
     
     # PID CONTROLLER:
-    Kp = 10
-    Ki = 0.01
-    Kd = 0.1
+    Kp = 20
+    Ki = 0.1
+    Kd = 0.001
     
     
     # Inverse Dynamics:
@@ -49,15 +49,15 @@ for i in range(0,int(T/dt)):
    
     
     phi_dot = (u[1] - u[0])/(2*r.h)
-    
+    mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
     
     # Simulate forward motion with these desired commands:
-    X_dot = r.ForwardDynamics(u,dq,phi_dot)
+    #X_dot = r.ForwardDynamics(u,dq,phi_dot)
         
-    p_dot = X_dot[0:2]
-    theta_dot = X_dot[2]
+    #p_dot = X_dot[0:2]
+    #theta_dot = X_dot[2]
     
-    mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
+    
 
     
 # =============================================================================
@@ -85,9 +85,12 @@ for i in range(0,int(T/dt)):
         
     mp += mp_dot*dt
     phi += phi_dot*dt
-    p += p_dot*dt
-    theta += theta_dot*dt
+    #p += p_dot*dt
+    #theta += theta_dot*dt
     q += r.dq[:]*dt
+    p[0] = mp[0] + np.cos(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) - np.sin(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
+    p[1] = mp[1] + np.sin(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) + np.cos(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
+    theta = phi + q[0] + q[1]
     # Save error for the derivative controller
     prev_error = error
     
@@ -99,15 +102,19 @@ for i in range(0,int(T/dt)):
     p_em = np.array([r.l[0]*np.cos(q[0]),
                      r.l[0]*np.sin(q[0])])
     # a and b are the components associated with dR/dt * p_em (derivative of the rot matrix)
-    a = (-np.sin(phi)*p_em[0] - np.cos(phi)*p_em[1])/(2*r.h)
-    b = (np.cos(phi)*p_em[0] - np.sin(phi)*p_em[1])/(2*r.h)
+    #a = (-np.sin(phi)*p_em[0] - np.cos(phi)*p_em[1])/(2*r.h)
+    #b = (np.cos(phi)*p_em[0] - np.sin(phi)*p_em[1])/(2*r.h)
     
-    J_1 = np.array([[np.cos(phi)/2 - a,np.cos(phi)/2 + a,-np.cos(phi)*r.l[0]*np.sin(q[0]) - np.sin(phi)*r.l[0]*np.cos(q[0])],
-                   [np.sin(phi)/2 - b,np.sin(phi)/2 + b,-np.sin(phi)*r.l[0]*np.sin(q[0]) + np.cos(phi)*r.l[0]*np.cos(q[0])],
-                   [-1/(2*r.h),1/(2*r.h),1]])
-    dp_joint_1 = np.dot(J_1,Q_dot_des[0:3])[0:2]
+    #J_1 = np.array([[np.cos(phi)/2 - a,np.cos(phi)/2 + a,-np.cos(phi)*r.l[0]*np.sin(q[0]) - np.sin(phi)*r.l[0]*np.cos(q[0])],
+    #               [np.sin(phi)/2 - b,np.sin(phi)/2 + b,-np.sin(phi)*r.l[0]*np.sin(q[0]) + np.cos(phi)*r.l[0]*np.cos(q[0])],
+    #               [-1/(2*r.h),1/(2*r.h),1]])
+    #dp_joint_1 = np.dot(J_1,Q_dot_des[0:3])[0:2]
     
-    p_joint_1 = r.p_joint_1 + dp_joint_1*dt
+    #p_joint_1 = r.p_joint_1 + dp_joint_1*dt
+    
+    p_joint_1 = np.zeros(2)
+    p_joint_1[0] = mp[0] + np.cos(phi)*p_em[0] - np.sin(phi)*p_em[1]
+    p_joint_1[1] = mp[1] + np.sin(phi)*p_em[0] + np.cos(phi)*p_em[1]
     
     r.Update(mp,phi,p,theta,q,dq,u,p_joint_1)
     

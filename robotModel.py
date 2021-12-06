@@ -4,7 +4,7 @@ class Robot:
         def __init__(self):
             self.l = np.array([1,1]) # links length
             self.R = 0.5 # radius of the mobile base
-            self.h = 0.4 # distance between wheels
+            self.h = 0.4 # distance between center and the wheel
             self.q = np.array([0.0, 0.0]) # joint positions
             self.dq =  np.array([0.0, 0.0]) # joint velocities
             self.u = np.array([1.0,1.0]) # velocities of wheels
@@ -50,8 +50,8 @@ class Robot:
             a = (-sphi*p_em[0] - cphi*p_em[1])/(2*self.h)
             b = (cphi*p_em[0] - sphi*p_em[1])/(2*self.h)
 
-            J = np.array([[cphi/2 - a, cphi/2 + a, cphi*(-self.l[0]*np.sin(q1)-self.l[1]*np.sin(q1+q2))-sphi*(self.l[1]*np.cos(q1)+self.l[1]*np.cos(q1+q2)), cphi*(-self.l[1]*np.sin(q1+q2))-sphi*(self.l[1]*np.cos(q1+q2))],
-                          [sphi/2 - b, sphi/2 + b, sphi*(-self.l[0]*np.sin(q1)-self.l[1]*np.sin(q1+q2))+cphi*(self.l[1]*np.cos(q1)+self.l[1]*np.cos(q1+q2)), sphi*(-self.l[1]*np.sin(q1+q2))+cphi*(self.l[1]*np.cos(q1+q2))],
+            J = np.array([[cphi/2 - a, cphi/2 + a, cphi*(-self.l[0]*np.sin(q1)-self.l[1]*np.sin(q1+q2))-sphi*(self.l[0]*np.cos(q1)+self.l[1]*np.cos(q1+q2)), cphi*(-self.l[1]*np.sin(q1+q2))-sphi*(self.l[1]*np.cos(q1+q2))],
+                          [sphi/2 - b, sphi/2 + b, sphi*(-self.l[0]*np.sin(q1)-self.l[1]*np.sin(q1+q2))+cphi*(self.l[0]*np.cos(q1)+self.l[1]*np.cos(q1+q2)), sphi*(-self.l[1]*np.sin(q1+q2))+cphi*(self.l[1]*np.cos(q1+q2))],
                           [-1/(2*self.h),1/(2*self.h),1,1]])
             return J
         
