@@ -2,6 +2,7 @@ import numpy as np
 from robotModel import Robot
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
+from RRT_algorithm import collisionBox
 # Total time in seconds:
 T = 1
 dt = 0.01 # time step
@@ -12,7 +13,7 @@ plt.figure(1)
 r = Robot()
 storeP = np.array([r.p])
 # Define desired pose to reach
-X_des = np.array([-2,4,np.pi/2])
+X_des = np.array([2,2,0])
 # Initialise some variables:
 error_i = 0
 prev_error = 0
@@ -167,6 +168,14 @@ for i in range(0,int(T/dt)):
     gripper = Arc((p[0]+0.25*np.cos(theta), p[1]+0.25*np.sin(theta)),0.5,0.5,angle+90,0,180, color='r')
     ax.add_patch(gripper)
     #
+    
+    base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
+    base_x,base_y = base_box.exterior.xy
+    plt.plot(base_x,base_y,'g')
+    x1,y1 = polygon1.exterior.xy
+    x2,y2 = polygon2.exterior.xy
+    plt.plot(x1,y1)
+    plt.plot(x2,y2)
     plt.grid()
     plt.pause(0.00001)
     

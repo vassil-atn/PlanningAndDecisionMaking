@@ -38,18 +38,13 @@ class Robot:
         def ForwardKinematicsConfig(self,q): # Find the workspace pose based on the configuration
             # Position of the mobile base:
             mp = np.array([q[0],q[1]])
-            
-            # Find the position of the centre of each link (for the circle)
-            p_centre1 = np.array([self.l[0]/2*np.cos(q[3]),
-                                  self.l[0]/2*np.sin(q[3])])     
+
             # Find the rotation matrix based on the heading of the mobile base                 
             R = self.rotationMatrix(q[2])
-            # Convert to global frame:
-            p_centre1 += R.dot(p_centre1) + mp
+            # Find the position of the centre of each link (for the polygons):
+            p_centre1 = mp + R.dot(np.array([self.l[0]/2*np.cos(q[3]),self.l[0]/2*np.sin(q[3])]))
             # 
-            p_centre2 = np.array([self.l[0]/2*np.cos(q[3]) + self.l[1]/2*np.cos(q[3]+q[4]),
-                         self.l[0]/2*np.sin(q[3]) + self.l[1]/2*np.sin(q[3]+q[4])])
-            p_centre2 += R.dot(p_centre2) + mp
+            p_centre2 = mp + R.dot(np.array([self.l[0]*np.cos(q[3]) + self.l[1]/2*np.cos(q[3]+q[4]),self.l[0]*np.sin(q[3]) + self.l[1]/2*np.sin(q[3]+q[4])]))
             
             return mp,p_centre1,p_centre2
             
