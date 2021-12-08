@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 # Total time in seconds:
 T = 1
-dt = 0.001 # time step
+dt = 0.01 # time step
 
 plt.figure(1)
 
@@ -51,7 +51,7 @@ for i in range(0,int(T/dt)):
     mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
     
     # Simulate forward motion with these desired commands:
-    #X_dot = r.ForwardDynamics(u,dq,phi_dot)
+    #X_dot = r.ForwardKinematics(u,dq,phi_dot)
         
     #p_dot = X_dot[0:2]
     #theta_dot = X_dot[2]
@@ -76,7 +76,7 @@ for i in range(0,int(T/dt)):
 ## SIMULATE MOVEMENT
     # Simulate forward motion with these desired commands:
     phi_dot = (u[1] - u[0])/(2*r.h)
-    X_dot = r.ForwardDynamics(u,dq,phi_dot)
+    X_dot = r.ForwardKinematics(u,dq,phi_dot)
         
     p_dot = X_dot[0:2]
     theta_dot = X_dot[2]

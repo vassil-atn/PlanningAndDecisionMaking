@@ -28,14 +28,34 @@ class Robot:
                           [np.sin(a),np.cos(a)]])
             
             return R
-        def ForwardDynamics(self,u_des,dq_des,phi_dot):
+        def ForwardKinematics(self,u_des,dq_des,phi_dot):
             Q_dot = np.array([u_des[0],u_des[1],dq_des[0],dq_des[1]])
             J = self.Jacobian(u_des,phi_dot)
             X_dot = np.dot(J,Q_dot)
             
             return X_dot
         
-        
+        def ForwardKinematicsConfig(self,q): # Find the workspace pose based on the configuration
+            # Position of the mobile base:
+            mp = np.array([q[0],q[1]])
+            
+            # Find the position of the centre of each link (for the circle)
+            p_centre1 = np.array([self.l[0]/2*np.cos(q[3]),
+                                  self.l[0]/2*np.sin(q[3])])     
+            # Find the rotation matrix based on the heading of the mobile base                 
+            R = self.rotationMatrix(q[2])
+            # Convert to global frame:
+            p_centre1 += R.dot(p_centre1) + mp
+            # 
+            p_centre2 = np.array([self.l[0]/2*np.cos(q[3]) + self.l[1]/2*np.cos(q[3]+q[4]),
+                         self.l[0]/2*np.sin(q[3]) + self.l[1]/2*np.sin(q[3]+q[4])])
+            p_centre2 += R.dot(p_centre2) + mp
+            
+            return mp,p_centre1,p_centre2
+            
+            
+            
+            return 
         def Jacobian(self,u,phi_dot):
             cphi = np.cos(self.phi)
             sphi = np.sin(self.phi)
