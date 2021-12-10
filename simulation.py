@@ -5,7 +5,7 @@ from matplotlib.patches import Arc
 from RRT_algorithm import collisionBox
 # Total time in seconds:
 T = 1
-dt = 0.01 # time step
+dt = 0.001 # time step
 
 plt.figure(1)
 
@@ -13,7 +13,7 @@ plt.figure(1)
 r = Robot()
 storeP = np.array([r.p])
 # Define desired pose to reach
-X_des = np.array([2,2,0])
+X_des = np.array([2,2,np.pi/2])
 # Initialise some variables:
 error_i = 0
 prev_error = 0
@@ -142,43 +142,45 @@ for i in range(0,int(T/dt)):
     
     storeP = np.append(storeP,[p],axis=0)
 # VISUALISE THE MOVEMENT
-    plt.cla()
-    plt.xlim([-5,5])
-    plt.ylim([-5,5])
-    ax = plt.gca()
-    # Plot the body of the robot:
-    robotBody = plt.Circle((mp[0], mp[1]), r.R, color='r',fill=False)
-    plt.plot([mp[0],mp[0]+0.8*np.cos(phi)],[mp[1],mp[1]+0.8*np.sin(phi)])
-    ax.add_patch(robotBody)
-    # Plot link 1:
-    plt.plot([mp[0],p_joint_1[0]],[mp[1],p_joint_1[1]],color='orange')
-    plt.plot(p_joint_1[0],p_joint_1[1],'.',color='k')
-    #
-    # Plot link 2:
-    #
-# =============================================================================
-#     p_joint_2 = np.array([0,0])
-#     p_joint_2[0] = p_joint_1[0] + r.l[1]*np.cos(r.q[0]+r.q[1])
-#     p_joint_2[1] = p_joint_1[1] + r.l[1]*np.sin(r.q[0]+r.q[1])
-#     plt.plot([p_joint_1[0],p_joint_2[0]],[p_joint_1[1],p_joint_2[1]],color='green')
-# =============================================================================
-    plt.plot([p_joint_1[0],p[0]],[p_joint_1[1],p[1]],color='orange')
-    # Add the gripper
-    angle = np.rad2deg(theta)
-    gripper = Arc((p[0]+0.25*np.cos(theta), p[1]+0.25*np.sin(theta)),0.5,0.5,angle+90,0,180, color='r')
-    ax.add_patch(gripper)
-    #
-    
-    base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
-    base_x,base_y = base_box.exterior.xy
-    plt.plot(base_x,base_y,'g')
-    x1,y1 = polygon1.exterior.xy
-    x2,y2 = polygon2.exterior.xy
-    plt.plot(x1,y1)
-    plt.plot(x2,y2)
-    plt.grid()
-    plt.pause(0.00001)
-    
+    if i%10==0:
+        plt.cla()
+        plt.xlim([-5,5])
+        plt.ylim([-5,5])
+        #plt.axis('equal')
+        ax = plt.gca()
+        # Plot the body of the robot:
+        robotBody = plt.Circle((mp[0], mp[1]), r.R, color='r',fill=False)
+        plt.plot([mp[0],mp[0]+0.8*np.cos(phi)],[mp[1],mp[1]+0.8*np.sin(phi)])
+        ax.add_patch(robotBody)
+        # Plot link 1:
+        plt.plot([mp[0],p_joint_1[0]],[mp[1],p_joint_1[1]],color='orange')
+        plt.plot(p_joint_1[0],p_joint_1[1],'.',color='k')
+        #
+        # Plot link 2:
+        #
+    # =============================================================================
+    #     p_joint_2 = np.array([0,0])
+    #     p_joint_2[0] = p_joint_1[0] + r.l[1]*np.cos(r.q[0]+r.q[1])
+    #     p_joint_2[1] = p_joint_1[1] + r.l[1]*np.sin(r.q[0]+r.q[1])
+    #     plt.plot([p_joint_1[0],p_joint_2[0]],[p_joint_1[1],p_joint_2[1]],color='green')
+    # =============================================================================
+        plt.plot([p_joint_1[0],p[0]],[p_joint_1[1],p[1]],color='orange')
+        # Add the gripper
+        angle = np.rad2deg(theta)
+        gripper = Arc((p[0]+0.25*np.cos(theta), p[1]+0.25*np.sin(theta)),0.5,0.5,angle+90,0,180, color='r')
+        ax.add_patch(gripper)
+        #
+        
+        base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
+        base_x,base_y = base_box.exterior.xy
+        plt.plot(base_x,base_y,'g')
+        x1,y1 = polygon1.exterior.xy
+        x2,y2 = polygon2.exterior.xy
+        plt.plot(x1,y1)
+        plt.plot(x2,y2)
+        plt.grid()
+        plt.pause(0.00001)
+        
     
 #plt.show()
 plt.plot(storeP[:,0],storeP[:,1],'--')
