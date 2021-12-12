@@ -1,8 +1,99 @@
 import numpy as np
 
-def checkPolysIntersecting(polyA, polyB):
+def checkPolyCircleIntersecting(poly, circleX, circleY, circleR):
+    """
+    Checks whether a polygon intersects a circle
+    
+    Parameters
+    ----------
+    poly : np.array(N,2)
+        Ordered list of 2D vertices defining a convex polygon
+    circleX, circleY : float
+        Circle centre coordinates
+    circleR : float
+        Circle radius
+
+    Returns
+    -------
+    bool
+        True - intersecting
+        False - not intersecting
+
     """
     
+    # Check if any line in poly collides with the circle
+    for i in range(len(poly)):
+        vStartIdx = i
+        # print("vStartIdx: ", vStartIdx)
+        vEndIdx = (i + 1) % len(poly)
+        # print("vEndIdx: ", vEndIdx)
+        
+        # Return intersecting True on first line collision
+        if checkLineCircleIntersecting(poly[vStartIdx,0], poly[vStartIdx,1],
+                                       poly[vEndIdx,0], poly[vEndIdx,1], 
+                                       circleX, circleY, circleR):
+            return True
+    
+    # No collision if all edges checked
+    return False
+
+
+def checkLineCircleIntersecting(X1, Y1, X2, Y2, circleX, circleY, circleR):
+    """
+    Checks whether a line intersects a circle
+    
+    Parameters
+    ----------
+    X1, Y1, X2, Y2: float
+        Start and end of line coordinates
+    circleX, circleY : float
+        Circle centre coordinates
+    circleR : float
+        Circle radius
+
+    Returns
+    -------
+    bool
+        True - intersecting
+        False - not intersecting
+
+    """
+    
+    vStart =  np.array([X1, Y1])
+    #print("vStart: ", vStart)
+    vEnd =  np.array([X2, Y2])   
+    #print("vEnd: ", vEnd)
+    centre = np.array([circleX, circleY])
+    line = vEnd - vStart
+    
+    # Check whether either end is inside circle
+    # if np.linalg.norm([vStart[0]-circleX, vStart[1]-circleY]) < circleR:
+    #     return True
+    # elif np.linalg.norm([vEnd[0]-circleX, vEnd[1]-circleY]) < circleR:
+    #     return True
+    
+    # Get projection size from edge start to circle centre onto edge
+    proj = np.dot(centre - vStart, line)
+    #print("proj: ", proj)
+    projFraction = proj/np.dot(line, line)
+    #print("projFraction: ", projFraction)
+    # if projection fraction is < 0 or > 1, closest point is off line (no collision)
+    if projFraction < 0 or projFraction > 1:
+        return False
+    
+    # Closest point on line
+    vClose = vStart + projFraction*line
+    # Distance closest point to centre
+    distClose = np.linalg.norm(centre - vClose)
+    
+    if distClose < circleR:
+        return True
+    else:
+        return False
+
+
+def checkPolysIntersecting(polyA, polyB):
+    """
     Checks whether convex polygons are intersecting by checking 
     if no separation axis from A to B and B to A. 
     
