@@ -13,7 +13,7 @@ plt.figure(1)
 r = Robot()
 storeP = np.array([r.p])
 # Define desired pose to reach
-X_des = np.array([2,2,np.pi/2])
+X_des = np.array([0,0,np.pi])
 # Initialise some variables:
 error_i = 0
 prev_error = 0
@@ -30,7 +30,7 @@ for i in range(0,int(T/dt)):
     
     # Inverse Dynamics:
 
-    J = r.Jacobian(r.u,phi_dot)    
+    J = r.Jacobian(r.u)    
     J_inv = np.dot(J.T,np.linalg.inv(np.dot(J,J.T)))
     
     X = np.array([r.p[0],r.p[1],r.theta])
