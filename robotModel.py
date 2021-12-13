@@ -32,7 +32,7 @@ class Robot:
         # WE DONT REALLY USE THIS ANYMORE, FIX IT
         def ForwardKinematics(self,u_des,dq_des,phi_dot):
             Q_dot = np.array([u_des[0],u_des[1],dq_des[0],dq_des[1]])
-            J = self.Jacobian(u_des,phi_dot)
+            J = self.Jacobian(u_des)
             X_dot = np.dot(J,Q_dot)
             
             return X_dot

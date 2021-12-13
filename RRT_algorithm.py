@@ -2,12 +2,12 @@ import numpy as np
 from robotModel import Robot
 from shapely.geometry import Polygon,Point
 from collision_detection import checkPolysIntersecting
-
+import matplotlib.pyplot as plt
 
 class Node:
-    def _init_(self,q):
+    def __init__(self,q):
         self.q = q
-        self.parent = []
+        self.parent = None
 
 
 def HaarMeasure(angle1,angle2):
@@ -37,13 +37,13 @@ def steeringFunction(q1,q2):
     
     
     
-    X_des = np.array(joint_2[0],joint_2[1],np.sum(q2[2:5]))
+    X_des = np.array([joint_2[0],joint_2[1],np.sum(q2[2:5])])
     T = 2
     dt = 0.001
     prev_error = 0
     error_i = 0
 
-    for i in range(0,T/dt):
+    for i in range(0,int(T/dt)):
     
         # PID CONTROLLER:
         Kp = 20
@@ -106,27 +106,34 @@ def steeringFunction(q1,q2):
         # Save error for the derivative controller
         prev_error = error
         
-        storeModel = [storeModel, np.array([mp,phi,q[0],q[1]])]
+        storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
         
     return storeModel,r
 
-def collisionFree(r,q,obstacles):
+def collisionFree(r,q,obstacles=None):
 
     # Build the bounding boxes for the base and the links:
     poly_base,poly_link1,poly_link2 = collisionBox(r,q)
     
     # Check if in collision:
+    obstacles = [Polygon([np.array([1,1]),np.array([1,2]),np.array([2,1]),np.array([2,2])])] 
     collision_free = True
-    for obst in obstacles:
-        if checkPolysIntersecting(poly_base,obst): 
-            collision_free = False
-            break
-        if checkPolysIntersecting(poly_link1,obst): 
-            collision_free = False
-            break
-        if checkPolysIntersecting(poly_link2,obst): 
-            collision_free = False
-            break
+    if obstacles != None:
+        for obst in obstacles:
+            if poly_base.intersects(obst) or poly_link1.intersects(obst) or poly_link2.intersects(obst):
+                collision_free = False
+                break
+# =============================================================================
+#             if checkPolysIntersecting(poly_base,obst): 
+#                 collision_free = False
+#                 break
+#             if checkPolysIntersecting(poly_link1,obst): 
+#                 collision_free = False
+#                 break
+#             if checkPolysIntersecting(poly_link2,obst): 
+#                 collision_free = False
+#                 break
+# =============================================================================
         
     return collision_free
 
@@ -160,11 +167,12 @@ def collisionBox(r,q):
 #
 #   
 #
-def RRT(start,goal,N):
-    #V = [start]
-    V = []
-    E = []
+def RRT(start,goal,N=100):
+    NodeList = []
     r = Robot()
+    # First add the starting node:
+    Node_inst = Node(start)
+    NodeList.append(Node_inst)
     # Define sets for each configuration variable:
     q1_set = np.array([0,10])
     q2_set = np.array([0,10])
@@ -174,7 +182,8 @@ def RRT(start,goal,N):
     
     for i in range(0,N):
 
-        best_distance = 0
+        print(f'Running sample number {i}')
+        best_distance = float('inf')
         # Pick a random point in C-space
         q = np.array([np.random.uniform(q1_set[0],q1_set[1]),
                       np.random.uniform(q2_set[0],q2_set[1]),
@@ -183,26 +192,51 @@ def RRT(start,goal,N):
                       np.random.uniform(q5_set[0],q5_set[1])])
         
         if collisionFree(r,q) == True:
- 
             # Find closest vertix in V 
-            for vertix in V:
-                distance = findDistance(vertix,q)
+            for idx, node in enumerate(NodeList):
+                distance = findDistance(node.q,q)
                 if distance < best_distance:
                     best_distance = distance
-                    q_closest = vertix
+                    closest_idx = idx
             
             # Now we have q1 and q2
-            storeModel,r = steeringFunction(q_closest,q)
+            storeModel,r = steeringFunction(NodeList[closest_idx].q,q)
             for n in range(len(storeModel)):
-                if collisionFree(storeModel[n])==0:
+                if collisionFree(r,storeModel[n])==0:
                     freePath = False
                     break
                 freePath = True
             if freePath == True:
-                E.append(best_distance)
+                Node_inst = Node(q)
+                Node_inst.parent = NodeList[closest_idx]
+                NodeList.append(Node_inst)
                 
-# =============================================================================
-#             if collisionFree(r,V[-1],goal) == True:
-#                 break
-# =============================================================================
+        # if the goal is close to the last added node        
+        if (abs(findDistance(NodeList[-1].q,goal)) < 5):
+            # Define path from last added node to goal:
+            storeModel,r = steeringFunction(NodeList[-1].q,goal)
+            # Check if path is free:
+            for n in range(len(storeModel)):
+                if collisionFree(r,storeModel[n])==0:
+                    freePath = False
+                    break
+                freePath = True
+                
+            if freePath == True:
+                Node_inst = Node(goal)
+                Node_inst.parent = NodeList[-1]
+                NodeList.append(Node_inst)
+                break
 
+    print("Path successfuly found!")
+    return NodeList
+
+
+# Simulate:
+start = np.array([0.0,0.0,0.0,0.0,0.0])
+goal = np.array([5.0,5.0,np.pi,0.0,0.0])
+NodeList = RRT(start,goal)
+for i in range(0,len(NodeList)):
+    x,y = NodeList[i].q[0:2]
+    plt.plot(x,y)
+plt.show()

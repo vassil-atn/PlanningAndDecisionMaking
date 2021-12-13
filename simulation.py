@@ -19,9 +19,12 @@ error_i = 0
 prev_error = 0
 phi_dot = 0
 
-for i in range(0,int(T/dt)):
+for i in range(0,int(T/dt)):    
 
-    
+
+
+
+
     # PID CONTROLLER:
     Kp = 20
     Ki = 0.1
@@ -176,6 +179,9 @@ for i in range(0,int(T/dt)):
         plt.plot(base_x,base_y,'g')
         x1,y1 = polygon1.exterior.xy
         x2,y2 = polygon2.exterior.xy
+        
+        
+        
         plt.plot(x1,y1)
         plt.plot(x2,y2)
         plt.grid()
