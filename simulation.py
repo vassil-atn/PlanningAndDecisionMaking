@@ -3,6 +3,7 @@ from robotModel import Robot
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 from RRT_algorithm import collisionBox
+from shapely.geometry import Polygon
 # Total time in seconds:
 T = 1
 dt = 0.001 # time step
@@ -18,6 +19,7 @@ X_des = np.array([0,0,np.pi])
 error_i = 0
 prev_error = 0
 phi_dot = 0
+
 
 for i in range(0,int(T/dt)):    
 
@@ -180,8 +182,15 @@ for i in range(0,int(T/dt)):
         x1,y1 = polygon1.exterior.xy
         x2,y2 = polygon2.exterior.xy
         
+        poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+        poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+        poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+
         
-        
+        plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+        plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+        plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+                
         plt.plot(x1,y1)
         plt.plot(x2,y2)
         plt.grid()

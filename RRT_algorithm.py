@@ -116,7 +116,10 @@ def collisionFree(r,q,obstacles=None):
     poly_base,poly_link1,poly_link2 = collisionBox(r,q)
     
     # Check if in collision:
-    obstacles = [Polygon([np.array([1,1]),np.array([1,2]),np.array([2,1]),np.array([2,2])])] 
+    obstacles = [Polygon([np.array([1,1]),np.array([1,2]),np.array([2,1]),np.array([2,2])]),
+                 Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])]),
+                 Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])]
+
     collision_free = True
     if obstacles != None:
         for obst in obstacles:
@@ -169,6 +172,7 @@ def collisionBox(r,q):
 #
 def RRT(start,goal,N=100):
     NodeList = []
+    plt.figure(1)
     r = Robot()
     # First add the starting node:
     Node_inst = Node(start)
@@ -210,23 +214,32 @@ def RRT(start,goal,N=100):
                 Node_inst = Node(q)
                 Node_inst.parent = NodeList[closest_idx]
                 NodeList.append(Node_inst)
+                # Plot the trajectory of the mobile base:
+# =============================================================================
+#                 plt.plot(Node_inst.q[0],Node_inst.q[1],'x')
+#                 plotTrajectory = np.array(storeModel)
+#                 plt.plot(plotTrajectory[:,0],plotTrajectory[:,1])
+#                 plt.show()
+#                 plt.pause(0.0001)
+# =============================================================================
+                
                 
         # if the goal is close to the last added node        
-        if (abs(findDistance(NodeList[-1].q,goal)) < 5):
-            # Define path from last added node to goal:
-            storeModel,r = steeringFunction(NodeList[-1].q,goal)
-            # Check if path is free:
-            for n in range(len(storeModel)):
-                if collisionFree(r,storeModel[n])==0:
-                    freePath = False
-                    break
-                freePath = True
-                
-            if freePath == True:
-                Node_inst = Node(goal)
-                Node_inst.parent = NodeList[-1]
-                NodeList.append(Node_inst)
+        #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
+        # Define path from last added node to goal:
+        storeModel,r = steeringFunction(NodeList[-1].q,goal)
+        # Check if path is free:
+        for n in range(len(storeModel)):
+            if collisionFree(r,storeModel[n])==0:
+                freePath = False
                 break
+            freePath = True
+            
+        if freePath == True:
+            Node_inst = Node(goal)
+            Node_inst.parent = NodeList[-1]
+            NodeList.append(Node_inst)
+            break
 
     print("Path successfuly found!")
     return NodeList
@@ -236,7 +249,29 @@ def RRT(start,goal,N=100):
 start = np.array([0.0,0.0,0.0,0.0,0.0])
 goal = np.array([5.0,5.0,np.pi,0.0,0.0])
 NodeList = RRT(start,goal)
-for i in range(0,len(NodeList)):
-    x,y = NodeList[i].q[0:2]
-    plt.plot(x,y)
+currentNode = NodeList[-1]
+path = []
+path.append(NodeList[-1])
+x = []
+y = []
+while currentNode != NodeList[0]:
+    path.append(currentNode.parent)
+    currentNode = currentNode.parent
+path= path[::-1]
+
+# Plot positions of the mobile base along the path:
+for i in range(0,len(path)):
+    x.append(path[i].q[0])
+    y.append(path[i].q[1])
+plt.plot(x,y)
+# obstacle (just for plotting)
+
+poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+
+
+plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
 plt.show()
