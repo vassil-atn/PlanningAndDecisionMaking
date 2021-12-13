@@ -3,6 +3,7 @@ from robotModel import Robot
 from shapely.geometry import Polygon,Point
 from collision_detection import checkPolysIntersecting
 import matplotlib.pyplot as plt
+from matplotlib.patches import Arc
 
 class Node:
     def __init__(self,q):
@@ -26,7 +27,7 @@ def findDistance(q1,q2):
     
     return distance
 
-def steeringFunction(q1,q2):
+def steeringFunction(q1,q2,plot=False):
     # convert q2 to workspace coordinates (x,y,theta), feed into IK model to find the path
     # MODIFY 
     storeModel = []
@@ -38,8 +39,8 @@ def steeringFunction(q1,q2):
     
     
     X_des = np.array([joint_2[0],joint_2[1],np.sum(q2[2:5])])
-    T = 2
-    dt = 0.001
+    T = 3
+    dt = 0.01
     prev_error = 0
     error_i = 0
 
@@ -107,6 +108,59 @@ def steeringFunction(q1,q2):
         prev_error = error
         
         storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
+        
+        if plot == True:
+                # VISUALISE THE MOVEMENT
+
+            plt.cla()
+            #plt.axis('equal')
+            ax = plt.gca()
+            # Plot the body of the robot:
+            robotBody = plt.Circle((mp[0], mp[1]), r.R, color='r',fill=False)
+            plt.plot([mp[0],mp[0]+0.8*np.cos(phi)],[mp[1],mp[1]+0.8*np.sin(phi)])
+            ax.add_patch(robotBody)
+            # Plot link 1:
+            plt.plot([mp[0],p_joint_1[0]],[mp[1],p_joint_1[1]],color='orange')
+            plt.plot(p_joint_1[0],p_joint_1[1],'.',color='k')
+            #
+            # Plot link 2:
+            #
+        # =============================================================================
+        #     p_joint_2 = np.array([0,0])
+        #     p_joint_2[0] = p_joint_1[0] + r.l[1]*np.cos(r.q[0]+r.q[1])
+        #     p_joint_2[1] = p_joint_1[1] + r.l[1]*np.sin(r.q[0]+r.q[1])
+        #     plt.plot([p_joint_1[0],p_joint_2[0]],[p_joint_1[1],p_joint_2[1]],color='green')
+        # =============================================================================
+            plt.plot([p_joint_1[0],p[0]],[p_joint_1[1],p[1]],color='orange')
+            # Add the gripper
+            angle = np.rad2deg(theta)
+            gripper = Arc((p[0]+0.25*np.cos(theta), p[1]+0.25*np.sin(theta)),0.5,0.5,angle+90,0,180, color='r')
+            ax.add_patch(gripper)
+            #
+            
+            base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
+            base_x,base_y = base_box.exterior.xy
+            plt.plot(base_x,base_y,'g')
+            x1,y1 = polygon1.exterior.xy
+            x2,y2 = polygon2.exterior.xy
+            
+            poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+            poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+            poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+    
+            
+            plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+            plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+            plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+                    
+            plt.plot(x1,y1)
+            plt.plot(x2,y2)
+            plt.grid()
+            plt.pause(0.00001)
+            plt.show()
+        
+        if np.all(abs(np.array([r.p[0],r.p[1],r.theta]) - X_des) < 0.01):
+            break
         
     return storeModel,r
 
@@ -260,18 +314,23 @@ while currentNode != NodeList[0]:
 path= path[::-1]
 
 # Plot positions of the mobile base along the path:
-for i in range(0,len(path)):
-    x.append(path[i].q[0])
-    y.append(path[i].q[1])
-plt.plot(x,y)
+# =============================================================================
+# for i in range(0,len(path)):
+#     x.append(path[i].q[0])
+#     y.append(path[i].q[1])
+# plt.plot(x,y)
+# =============================================================================
 # obstacle (just for plotting)
 
-poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
-poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
-poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
-
-
-plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
-plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
-plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
-plt.show()
+for i in range(1,len(path)):
+    steeringFunction(path[i-1].q, path[i].q,plot=True)
+    
+    poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+    poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+    poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+    
+    
+    plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+    plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+    plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+    plt.show()
