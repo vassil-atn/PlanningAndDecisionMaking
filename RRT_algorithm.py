@@ -313,13 +313,7 @@ while currentNode != NodeList[0]:
     currentNode = currentNode.parent
 path= path[::-1]
 
-# Plot positions of the mobile base along the path:
-# =============================================================================
-# for i in range(0,len(path)):
-#     x.append(path[i].q[0])
-#     y.append(path[i].q[1])
-# plt.plot(x,y)
-# =============================================================================
+
 # obstacle (just for plotting)
 
 for i in range(1,len(path)):
@@ -333,4 +327,7 @@ for i in range(1,len(path)):
     plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
     plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
     plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+    # Plot positions of the mobile base along the path:
+    plt.plot(path[i-1].q[0],path[i-1].q[1],'x')
     plt.show()
+
