@@ -12,11 +12,13 @@ class Robot:
             # Position of the mobile base:
             self.mp = mp
             # Initial position of the end effector:
-            self.p = np.array([(np.sum(self.l))*np.cos(self.phi),
-                               (np.sum(self.l))*np.sin(self.phi)])
+            #self.p = np.array([(np.sum(self.l))*np.cos(self.phi),
+            #                   (np.sum(self.l))*np.sin(self.phi)])
+            self.p = mp + self.rotationMatrix(phi).dot(np.array([self.l[0]*np.cos(q[0]) + self.l[1]*np.cos(q[0]+q[1]),self.l[0]*np.sin(q[0]) + self.l[1]*np.sin(q[0]+q[1])]))
             # Initial position of the first joint:
-            self.p_joint_1 = np.array([(self.l[0])*np.cos(self.phi),
-                               (self.l[1])*np.sin(self.phi)])
+            #self.p_joint_1 = np.array([(self.l[0])*np.cos(self.phi),
+            #                   (self.l[1])*np.sin(self.phi)])
+            self.p_joint_1 = mp + self.rotationMatrix(phi).dot(np.array([self.l[0]*np.cos(q[0]),self.l[0]*np.sin(q[0])]))
             # FIX THIS - I THINK I FIXED IT
             self.theta = phi + np.sum(q) # orientation of the end effector (FIX THIS)
             
