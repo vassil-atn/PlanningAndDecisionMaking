@@ -67,16 +67,15 @@ def checkLineCircleIntersecting(X1, Y1, X2, Y2, circleX, circleY, circleR):
     line = vEnd - vStart
     
     # Check whether either end is inside circle
-    # if np.linalg.norm([vStart[0]-circleX, vStart[1]-circleY]) < circleR:
-    #     return True
-    # elif np.linalg.norm([vEnd[0]-circleX, vEnd[1]-circleY]) < circleR:
-    #     return True
+    if np.linalg.norm([vStart[0]-circleX, vStart[1]-circleY]) < circleR:
+        return True
+    elif np.linalg.norm([vEnd[0]-circleX, vEnd[1]-circleY]) < circleR:
+        return True
     
     # Get projection size from edge start to circle centre onto edge
     proj = np.dot(centre - vStart, line)
     #print("proj: ", proj)
     projFraction = proj/np.dot(line, line)
-    #print("projFraction: ", projFraction)
     # if projection fraction is < 0 or > 1, closest point is off line (no collision)
     if projFraction < 0 or projFraction > 1:
         return False

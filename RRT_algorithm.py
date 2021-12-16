@@ -1,7 +1,7 @@
 import numpy as np
 from robotModel import Robot
 from shapely.geometry import Polygon,Point
-from collision_detection import checkPolysIntersecting
+from collision_detection import checkPolysIntersecting, checkPolyCircleIntersecting
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 
@@ -108,123 +108,165 @@ def steeringFunction(q1,q2,plot=False):
         prev_error = error
         
         storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
-        
-        if plot == True:
-                # VISUALISE THE MOVEMENT
 
-            plt.cla()
-            #plt.axis('equal')
-            ax = plt.gca()
-            # Plot the body of the robot:
-            robotBody = plt.Circle((mp[0], mp[1]), r.R, color='r',fill=False)
-            plt.plot([mp[0],mp[0]+0.8*np.cos(phi)],[mp[1],mp[1]+0.8*np.sin(phi)])
-            ax.add_patch(robotBody)
-            # Plot link 1:
-            plt.plot([mp[0],p_joint_1[0]],[mp[1],p_joint_1[1]],color='orange')
-            plt.plot(p_joint_1[0],p_joint_1[1],'.',color='k')
-            #
-            # Plot link 2:
-            #
-        # =============================================================================
-        #     p_joint_2 = np.array([0,0])
-        #     p_joint_2[0] = p_joint_1[0] + r.l[1]*np.cos(r.q[0]+r.q[1])
-        #     p_joint_2[1] = p_joint_1[1] + r.l[1]*np.sin(r.q[0]+r.q[1])
-        #     plt.plot([p_joint_1[0],p_joint_2[0]],[p_joint_1[1],p_joint_2[1]],color='green')
-        # =============================================================================
-            plt.plot([p_joint_1[0],p[0]],[p_joint_1[1],p[1]],color='orange')
-            # Add the gripper
-            angle = np.rad2deg(theta)
-            gripper = Arc((p[0]+0.25*np.cos(theta), p[1]+0.25*np.sin(theta)),0.5,0.5,angle+90,0,180, color='r')
-            ax.add_patch(gripper)
-            #
-            
-            base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
-            base_x,base_y = base_box.exterior.xy
-            plt.plot(base_x,base_y,'g')
-            x1,y1 = polygon1.exterior.xy
-            x2,y2 = polygon2.exterior.xy
-            
-            poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
-            poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
-            poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
-    
-            
-            plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
-            plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
-            plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
-                    
-            plt.plot(x1,y1)
-            plt.plot(x2,y2)
-            plt.grid()
-            plt.pause(0.00001)
-            plt.show()
-        
+# =============================================================================
+#          
+#         if plot == True:
+#             
+#             # VISUALISE THE MOVEMENT
+#            
+#             plt.cla()
+#             #plt.axis('equal')
+#             ax = plt.gca()
+#             # Plot the body of the robot:
+#             robotBody = plt.Circle((mp[0], mp[1]), r.R, color='r',fill=False)
+#             plt.plot([mp[0],mp[0]+0.8*np.cos(phi)],[mp[1],mp[1]+0.8*np.sin(phi)])
+#             ax.add_patch(robotBody)
+#             # Plot link 1:
+#             plt.plot([mp[0],p_joint_1[0]],[mp[1],p_joint_1[1]],color='orange')
+#             plt.plot(p_joint_1[0],p_joint_1[1],'.',color='k')
+#             #
+#             # Plot link 2:
+#             #
+#         # =============================================================================
+#         #     p_joint_2 = np.array([0,0])
+#         #     p_joint_2[0] = p_joint_1[0] + r.l[1]*np.cos(r.q[0]+r.q[1])
+#         #     p_joint_2[1] = p_joint_1[1] + r.l[1]*np.sin(r.q[0]+r.q[1])
+#         #     plt.plot([p_joint_1[0],p_joint_2[0]],[p_joint_1[1],p_joint_2[1]],color='green')
+#         # =============================================================================
+#             plt.plot([p_joint_1[0],p[0]],[p_joint_1[1],p[1]],color='orange')
+#             # Add the gripper
+#             angle = np.rad2deg(theta)
+#             gripper = Arc((p[0]+0.25*np.cos(theta), p[1]+0.25*np.sin(theta)),0.5,0.5,angle+90,0,180, color='r')
+#             ax.add_patch(gripper)
+#             #
+#             
+#             base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
+#             base_x,base_y = base_box.exterior.xy
+#             plt.plot(base_x,base_y,'g')
+#             x1,y1 = polygon1.exterior.xy
+#             x2,y2 = polygon2.exterior.xy
+#             
+#             poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+#             poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+#             poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+#     
+#             
+#             plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+#             plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+#             plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+#                     
+#             plt.plot(x1,y1)
+#             plt.plot(x2,y2)
+#             plt.grid()
+#             plt.pause(0.00001)
+#             plt.show()
+#         
+# =============================================================================
+
         if np.all(abs(np.array([r.p[0],r.p[1],r.theta]) - X_des) < 0.01):
             break
         
     return storeModel,r
 
+
 def collisionFree(r,q,obstacles=None):
 
     # Build the bounding boxes for the base and the links:
-    poly_base,poly_link1,poly_link2 = collisionBox(r,q)
+    poly_link1,poly_link2 = collisionBox(r,q)
     
-    # Check if in collision:
-    obstacles = [Polygon([np.array([1,1]),np.array([1,2]),np.array([2,1]),np.array([2,2])]),
-                 Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])]),
-                 Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])]
+# =============================================================================
+# 
+#     # Test obstacles for Shapely version
+#     # Check if in collision:
+#     obstacles = [Polygon([np.array([1,1]),np.array([1,2]),np.array([2,1]),np.array([2,2])]),
+#                  Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])]),
+#                  Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])]
+#     
+# =============================================================================
 
     collision_free = True
     if obstacles != None:
         for obst in obstacles:
-            if poly_base.intersects(obst) or poly_link1.intersects(obst) or poly_link2.intersects(obst):
+            if checkPolyCircleIntersecting(obst, q[0], q[1], r.R):
+                collision_free = False
+                break
+            if checkPolysIntersecting(poly_link1,obst): 
+                collision_free = False
+                break
+            if checkPolysIntersecting(poly_link2,obst): 
                 collision_free = False
                 break
 # =============================================================================
-#             if checkPolysIntersecting(poly_base,obst): 
-#                 collision_free = False
-#                 break
-#             if checkPolysIntersecting(poly_link1,obst): 
-#                 collision_free = False
-#                 break
-#             if checkPolysIntersecting(poly_link2,obst): 
+#             # For Shapely version
+#             if poly_base.intersects(obst) or poly_link1.intersects(obst) or poly_link2.intersects(obst):
 #                 collision_free = False
 #                 break
 # =============================================================================
         
     return collision_free
 
-#
-#
-# Helper function to define the vertices of the polygons around the robot arm
-def buildPolygons(r,link_centre,angle): 
-    poly = []
-    link_length = r.l[0]
-    link_width = 0.2
-    r = Robot()
-    R = r.rotationMatrix(angle)
-    poly.append(link_centre + R.dot(np.array([-link_length/2,link_width/2])))
-    poly.append(link_centre + R.dot(np.array([link_length/2,link_width/2])))
-    poly.append(link_centre + R.dot(np.array([link_length/2,-link_width/2])))
-    poly.append(link_centre + R.dot(np.array([-link_length/2,-link_width/2])))
-    return poly
-#
-#
-#
-# This function finds the collision polygons for the robot (base+arms)
+# =============================================================================
+# #
+# #
+# # Helper function to define the vertices of the polygons around the robot arm
+# def buildPolygons(r,link_centre,angle): 
+#     poly = []
+#     link_length = r.l[0]
+#     link_width = 0.2
+#     r = Robot()
+#     R = r.rotationMatrix(angle)
+#     poly.append(link_centre + R.dot(np.array([-link_length/2,link_width/2])))
+#     poly.append(link_centre + R.dot(np.array([link_length/2,link_width/2])))
+#     poly.append(link_centre + R.dot(np.array([link_length/2,-link_width/2])))
+#     poly.append(link_centre + R.dot(np.array([-link_length/2,-link_width/2])))
+#     return poly
+# #
+# #
+# =============================================================================
+
+# This function finds the collision polygons for the robot links only
 def collisionBox(r,q): 
-    mp,p_centre1,p_centre2,_,_ = r.ForwardKinematicsConfig(q)
-    phi = q[2]
-    # for the base it's a circle:
-    base_box = Point(mp).buffer(0.6) # Create a circle centered at the centre of the mobile base with radius 0.5
-    polygon1 = Polygon(buildPolygons(r,p_centre1,r.q[0]+phi))
-    polygon2 = Polygon(buildPolygons(r,p_centre2,q[3]+q[4]+phi))
+    mp,p_centre1,p_centre2,joint1,joint2 = r.ForwardKinematicsConfig(q)
+    l1_orth = q[2]+q[3]+np.pi/2
+    l2_orth = q[2]+q[3]+q[4]+np.pi/2
+    thk = 0.1   # half the thickness of the link
     
-    return base_box,polygon1,polygon2
-#
+    # link 1 corners
+    c1 = np.array([mp[0]+thk*np.cos(l1_orth), mp[0]+thk*np.sin(l1_orth)])
+    c2 = np.array([joint1[0]+thk*np.cos(l1_orth), joint1[0]+thk*np.sin(l1_orth)])
+    c3 = np.array([joint1[0]-thk*np.cos(l1_orth), joint1[0]-thk*np.sin(l1_orth)])
+    c4 = np.array([mp[0]-thk*np.cos(l1_orth), mp[0]-thk*np.sin(l1_orth)])
+    l1_poly = np.vstack((c1,c2,c3,c4))
+    # link 2 corners
+    c1 = np.array([joint1[0]+thk*np.cos(l2_orth), joint1[0]+thk*np.sin(l2_orth)])
+    c2 = np.array([joint2[0]+thk*np.cos(l2_orth), joint2[0]+thk*np.sin(l2_orth)])
+    c3 = np.array([joint2[0]-thk*np.cos(l2_orth), joint2[0]-thk*np.sin(l2_orth)])
+    c4 = np.array([joint1[0]-thk*np.cos(l2_orth), joint1[0]-thk*np.sin(l2_orth)])
+    l2_poly = np.vstack((c1,c2,c3,c4))
+    
+    return l1_poly,l2_poly
+# =============================================================================
+# # Shapely version
+# # This function finds the collision polygons for the robot (base+arms)
+# def collisionBox(r,q): 
+#     mp,p_centre1,p_centre2,_,_ = r.ForwardKinematicsConfig(q)
+#     phi = q[2]
+#     # for the base it's a circle:
+#     base_box = Point(mp).buffer(0.6) # Create a circle centered at the centre of the mobile base with radius 0.5
+#     polygon1 = Polygon(buildPolygons(r,p_centre1,r.q[0]+phi))
+#     polygon2 = Polygon(buildPolygons(r,p_centre2,q[3]+q[4]+phi))
+#     
+#     return base_box,polygon1,polygon2
+# 
+# =============================================================================
 #   
 #
-def RRT(start,goal,N=100):
+#
+def RRT(start,goal,N=100,obstacles=None):
+    
+    np.random.seed(0)
+    
     NodeList = []
     plt.figure(1)
     r = Robot()
@@ -232,8 +274,8 @@ def RRT(start,goal,N=100):
     Node_inst = Node(start)
     NodeList.append(Node_inst)
     # Define sets for each configuration variable:
-    q1_set = np.array([0,10])
-    q2_set = np.array([0,10])
+    q1_set = np.array([0,30]) # TODO - link to room dimensions
+    q2_set = np.array([0,20])
     q3_set = np.array([0,2*np.pi])
     q4_set = np.array([0,2*np.pi])
     q5_set = np.array([0,2*np.pi])
@@ -249,7 +291,8 @@ def RRT(start,goal,N=100):
                       np.random.uniform(q4_set[0],q4_set[1]),
                       np.random.uniform(q5_set[0],q5_set[1])])
         
-        if collisionFree(r,q) == True:
+        if collisionFree(r,q,obstacles) == True:
+            print(f'Sample number {i} config is collision free!')
             # Find closest vertix in V 
             for idx, node in enumerate(NodeList):
                 distance = findDistance(node.q,q)
@@ -260,11 +303,13 @@ def RRT(start,goal,N=100):
             # Now we have q1 and q2
             storeModel,r = steeringFunction(NodeList[closest_idx].q,q)
             for n in range(len(storeModel)):
-                if collisionFree(r,storeModel[n])==0:
+                if collisionFree(r,storeModel[n],obstacles)==0:
+                    print(f'Sample number {i} trajectory has a collision!')
                     freePath = False
                     break
                 freePath = True
             if freePath == True:
+                print(f'Sample number {i} added to tree!')
                 Node_inst = Node(q)
                 Node_inst.parent = NodeList[closest_idx]
                 NodeList.append(Node_inst)
@@ -276,58 +321,62 @@ def RRT(start,goal,N=100):
 #                 plt.show()
 #                 plt.pause(0.0001)
 # =============================================================================
-                
+        else:
+            print(f'Sample number {i} config has a collision!')
                 
         # if the goal is close to the last added node        
-        #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
-        # Define path from last added node to goal:
-        storeModel,r = steeringFunction(NodeList[-1].q,goal)
-        # Check if path is free:
-        for n in range(len(storeModel)):
-            if collisionFree(r,storeModel[n])==0:
-                freePath = False
+        if (abs(findDistance(NodeList[-1].q,goal)) < 5):
+            # Define path from last added node to goal:
+            storeModel,r = steeringFunction(NodeList[-1].q,goal)
+            # Check if path is free:
+            for n in range(len(storeModel)):
+                if collisionFree(r,storeModel[n],obstacles)==0:
+                    freePath = False
+                    break
+                freePath = True
+                
+            if freePath == True:
+                print(f'Sample number {i} has a path to goal!')
+                Node_inst = Node(goal)
+                Node_inst.parent = NodeList[-1]
+                NodeList.append(Node_inst)
                 break
-            freePath = True
-            
-        if freePath == True:
-            Node_inst = Node(goal)
-            Node_inst.parent = NodeList[-1]
-            NodeList.append(Node_inst)
-            break
 
-    print("Path successfuly found!")
+    #print("Path successfuly found!")
     return NodeList
 
-
-# Simulate:
-start = np.array([0.0,0.0,0.0,0.0,0.0])
-goal = np.array([5.0,5.0,np.pi,0.0,0.0])
-NodeList = RRT(start,goal)
-currentNode = NodeList[-1]
-path = []
-path.append(NodeList[-1])
-x = []
-y = []
-while currentNode != NodeList[0]:
-    path.append(currentNode.parent)
-    currentNode = currentNode.parent
-path= path[::-1]
-
-
-# obstacle (just for plotting)
-
-for i in range(1,len(path)):
-    steeringFunction(path[i-1].q, path[i].q,plot=True)
-    
-    poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
-    poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
-    poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
-    
-    
-    plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
-    plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
-    plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
-    # Plot positions of the mobile base along the path:
-    plt.plot(path[i-1].q[0],path[i-1].q[1],'x')
-    plt.show()
-
+# =============================================================================
+# 
+# # Simulate:
+# start = np.array([0.0,0.0,0.0,0.0,0.0])
+# goal = np.array([5.0,5.0,np.pi,0.0,0.0])
+# NodeList = RRT(start,goal)
+# currentNode = NodeList[-1]
+# path = []
+# path.append(NodeList[-1])
+# x = []
+# y = []
+# while currentNode != NodeList[0]:
+#     path.append(currentNode.parent)
+#     currentNode = currentNode.parent
+# path= path[::-1]
+# 
+# 
+# # obstacle (just for plotting)
+# 
+# for i in range(1,len(path)):
+#     steeringFunction(path[i-1].q, path[i].q,plot=True)
+#     
+#     poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+#     poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+#     poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+#     
+#     
+#     plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+#     plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+#     plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+#     # Plot positions of the mobile base along the path:
+#     plt.plot(path[i-1].q[0],path[i-1].q[1],'x')
+#     plt.show()
+# 
+# =============================================================================
