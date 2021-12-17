@@ -1,9 +1,10 @@
 import numpy as np
 from robotModel import Robot
-from shapely.geometry import Polygon,Point
+#from shapely.geometry import Polygon,Point
 from collision_detection import checkPolysIntersecting, checkPolyCircleIntersecting
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
+
 
 class Node:
     def __init__(self,q):
@@ -26,6 +27,7 @@ def findDistance(q1,q2):
     distance = np.linalg.norm(q1[0:2] - q2[0:2]) + HaarMeasure(q1[2],q2[2]) + HaarMeasure(q1[3],q2[3])
     
     return distance
+
 
 def steeringFunction(q1,q2,plot=False):
     # convert q2 to workspace coordinates (x,y,theta), feed into IK model to find the path
@@ -51,7 +53,6 @@ def steeringFunction(q1,q2,plot=False):
         Ki = 0.1
         Kd = 0.001
         
-        
         # Inverse Dynamics:
     
         J = r.Jacobian(r.u)    
@@ -69,17 +70,16 @@ def steeringFunction(q1,q2,plot=False):
         Q_dot_des = np.dot(J_inv,X_dot_controller)
         
         # Get the desired inputs for the joints and wheels:
+        #u = np.clip(Q_dot_des[0:2],-5,5)
+        #dq = np.clip(Q_dot_des[2:4],-0.5,0.5)
         u = Q_dot_des[0:2]
         dq = Q_dot_des[2:4]
-        
-        phi_dot = (u[1] - u[0])/(2*r.h)
-        mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
+
         
         # Simulate forward motion with these desired commands:
         phi_dot = (u[1] - u[0])/(2*r.h)
-        X_dot = r.ForwardKinematics(u,dq,phi_dot)
-        
         mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
+        
         # Integrate numerically:
         mp = r.mp.copy()
         phi = r.phi
@@ -108,9 +108,8 @@ def steeringFunction(q1,q2,plot=False):
         prev_error = error
         
         storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
-
+ 
 # =============================================================================
-#          
 #         if plot == True:
 #             
 #             # VISUALISE THE MOVEMENT
@@ -161,9 +160,8 @@ def steeringFunction(q1,q2,plot=False):
 #             plt.grid()
 #             plt.pause(0.00001)
 #             plt.show()
-#         
 # =============================================================================
-
+        
         if np.all(abs(np.array([r.p[0],r.p[1],r.theta]) - X_des) < 0.01):
             break
         
@@ -176,13 +174,11 @@ def collisionFree(r,q,obstacles=None):
     poly_link1,poly_link2 = collisionBox(r,q)
     
 # =============================================================================
-# 
 #     # Test obstacles for Shapely version
 #     # Check if in collision:
 #     obstacles = [Polygon([np.array([1,1]),np.array([1,2]),np.array([2,1]),np.array([2,2])]),
 #                  Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])]),
-#                  Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])]
-#     
+#                  Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])]  
 # =============================================================================
 
     collision_free = True
@@ -203,12 +199,10 @@ def collisionFree(r,q,obstacles=None):
 #                 collision_free = False
 #                 break
 # =============================================================================
-        
     return collision_free
 
+
 # =============================================================================
-# #
-# #
 # # Helper function to define the vertices of the polygons around the robot arm
 # def buildPolygons(r,link_centre,angle): 
 #     poly = []
@@ -221,9 +215,8 @@ def collisionFree(r,q,obstacles=None):
 #     poly.append(link_centre + R.dot(np.array([link_length/2,-link_width/2])))
 #     poly.append(link_centre + R.dot(np.array([-link_length/2,-link_width/2])))
 #     return poly
-# #
-# #
 # =============================================================================
+
 
 # This function finds the collision polygons for the robot links only
 def collisionBox(r,q): 
@@ -233,16 +226,16 @@ def collisionBox(r,q):
     thk = 0.1   # half the thickness of the link
     
     # link 1 corners
-    c1 = np.array([mp[0]+thk*np.cos(l1_orth), mp[0]+thk*np.sin(l1_orth)])
-    c2 = np.array([joint1[0]+thk*np.cos(l1_orth), joint1[0]+thk*np.sin(l1_orth)])
-    c3 = np.array([joint1[0]-thk*np.cos(l1_orth), joint1[0]-thk*np.sin(l1_orth)])
-    c4 = np.array([mp[0]-thk*np.cos(l1_orth), mp[0]-thk*np.sin(l1_orth)])
+    c1 = np.array([mp[0]+thk*np.cos(l1_orth), mp[1]+thk*np.sin(l1_orth)])
+    c2 = np.array([joint1[0]+thk*np.cos(l1_orth), joint1[1]+thk*np.sin(l1_orth)])
+    c3 = np.array([joint1[0]-thk*np.cos(l1_orth), joint1[1]-thk*np.sin(l1_orth)])
+    c4 = np.array([mp[0]-thk*np.cos(l1_orth), mp[1]-thk*np.sin(l1_orth)])
     l1_poly = np.vstack((c1,c2,c3,c4))
     # link 2 corners
-    c1 = np.array([joint1[0]+thk*np.cos(l2_orth), joint1[0]+thk*np.sin(l2_orth)])
-    c2 = np.array([joint2[0]+thk*np.cos(l2_orth), joint2[0]+thk*np.sin(l2_orth)])
-    c3 = np.array([joint2[0]-thk*np.cos(l2_orth), joint2[0]-thk*np.sin(l2_orth)])
-    c4 = np.array([joint1[0]-thk*np.cos(l2_orth), joint1[0]-thk*np.sin(l2_orth)])
+    c1 = np.array([joint1[0]+thk*np.cos(l2_orth), joint1[1]+thk*np.sin(l2_orth)])
+    c2 = np.array([joint2[0]+thk*np.cos(l2_orth), joint2[1]+thk*np.sin(l2_orth)])
+    c3 = np.array([joint2[0]-thk*np.cos(l2_orth), joint2[1]-thk*np.sin(l2_orth)])
+    c4 = np.array([joint1[0]-thk*np.cos(l2_orth), joint1[1]-thk*np.sin(l2_orth)])
     l2_poly = np.vstack((c1,c2,c3,c4))
     
     return l1_poly,l2_poly
@@ -260,22 +253,65 @@ def collisionBox(r,q):
 #     return base_box,polygon1,polygon2
 # 
 # =============================================================================
-#   
-#
-#
-def RRT(start,goal,N=100,obstacles=None):
+
+
+def plotConfig(ax, q, collision = False, r = None):
+    if collision:
+        ax.plot(q[0],q[1],'or')
+    else:
+        ax.plot(q[0],q[1],'ob')
+        
+    if r != None:
+        if collision:
+            ax.add_patch(plt.Circle((q[0], q[1]), r.R, color='r',fill=False))
+        else:
+            ax.add_patch(plt.Circle((q[0], q[1]), r.R, color='b',fill=False))
+        _,_,_,j1,j2 = r.ForwardKinematicsConfig(q)
+        ax.plot([q[0],j1[0],j2[0]],[q[1],j1[1],j2[1]],'k')
+        
+    plt.show()
+    plt.pause(0.001)
+
+
+def plotPath(ax, q1, q2, collision = False):
+    if collision:
+        ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-r')
+    else:
+        ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-b')
+    plt.show()
+    plt.pause(0.001)
+
+
+def plotTrajectory(ax, traj, collision=False, r = None):
+    if collision:
+        ax.plot(traj[-1,0],traj[-1,1],'xm')
+        ax.plot(traj[:,0],traj[:,1],'--m')
+    else:
+        ax.plot(traj[-1,0],traj[-1,1],'xc')
+        ax.plot(traj[:,0],traj[:,1],'--c')
     
-    np.random.seed(0)
+    if r != None:
+        for traj_q in traj:
+            plotConfig(ax, traj_q, collision=collision, r=r)
     
+    plt.show()
+    plt.pause(0.001)
+
+
+def RRT(start,goal,width,height,ax,N=100,obstacles=None):
+    
+    # Init seed for repeatability
+    np.random.seed(1)
+        
     NodeList = []
-    plt.figure(1)
     r = Robot()
+    
     # First add the starting node:
     Node_inst = Node(start)
     NodeList.append(Node_inst)
     # Define sets for each configuration variable:
-    q1_set = np.array([0,30]) # TODO - link to room dimensions
-    q2_set = np.array([0,20])
+    q1_set = np.array([0,width])
+    q2_set = np.array([0,height])
     q3_set = np.array([0,2*np.pi])
     q4_set = np.array([0,2*np.pi])
     q5_set = np.array([0,2*np.pi])
@@ -293,6 +329,7 @@ def RRT(start,goal,N=100,obstacles=None):
         
         if collisionFree(r,q,obstacles) == True:
             print(f'Sample number {i} config is collision free!')
+            plotConfig(ax, q, collision=False, r=r)
             # Find closest vertix in V 
             for idx, node in enumerate(NodeList):
                 distance = findDistance(node.q,q)
@@ -303,46 +340,45 @@ def RRT(start,goal,N=100,obstacles=None):
             # Now we have q1 and q2
             storeModel,r = steeringFunction(NodeList[closest_idx].q,q)
             for n in range(len(storeModel)):
-                if collisionFree(r,storeModel[n],obstacles)==0:
-                    print(f'Sample number {i} trajectory has a collision!')
+                if collisionFree(r,storeModel[n],obstacles)==0:                    
                     freePath = False
+                    print(f'Sample number {i} trajectory has a collision!')
+                    plotPath(ax, q, NodeList[closest_idx].q, collision=True)
+                    plotTrajectory(ax, np.array(storeModel), collision=True,r=r)
+
                     break
                 freePath = True
+                
             if freePath == True:
-                print(f'Sample number {i} added to tree!')
                 Node_inst = Node(q)
                 Node_inst.parent = NodeList[closest_idx]
                 NodeList.append(Node_inst)
-                # Plot the trajectory of the mobile base:
-# =============================================================================
-#                 plt.plot(Node_inst.q[0],Node_inst.q[1],'x')
-#                 plotTrajectory = np.array(storeModel)
-#                 plt.plot(plotTrajectory[:,0],plotTrajectory[:,1])
-#                 plt.show()
-#                 plt.pause(0.0001)
-# =============================================================================
+                print(f'Sample number {i} added to tree!')
+                plotPath(ax, q, NodeList[closest_idx].q, collision=False)
+                plotTrajectory(ax, np.array(storeModel), collision=False,r=r)
         else:
             print(f'Sample number {i} config has a collision!')
+            plotConfig(ax, q, collision=True, r=r)
                 
         # if the goal is close to the last added node        
-        if (abs(findDistance(NodeList[-1].q,goal)) < 5):
-            # Define path from last added node to goal:
-            storeModel,r = steeringFunction(NodeList[-1].q,goal)
-            # Check if path is free:
-            for n in range(len(storeModel)):
-                if collisionFree(r,storeModel[n],obstacles)==0:
-                    freePath = False
-                    break
-                freePath = True
-                
-            if freePath == True:
-                print(f'Sample number {i} has a path to goal!')
-                Node_inst = Node(goal)
-                Node_inst.parent = NodeList[-1]
-                NodeList.append(Node_inst)
+        # if (abs(findDistance(NodeList[-1].q,goal)) < 5):
+            
+        # Define path from last added node to goal:
+        storeModel,r = steeringFunction(NodeList[-1].q,goal)
+        # Check if path is free:
+        for n in range(len(storeModel)):
+            if collisionFree(r,storeModel[n],obstacles)==0:
+                freePath = False
                 break
+            freePath = True
+            
+        if freePath == True:
+            print(f'Sample number {i} has a path to goal!')
+            Node_inst = Node(goal)
+            Node_inst.parent = NodeList[-1]
+            NodeList.append(Node_inst)
+            break
 
-    #print("Path successfuly found!")
     return NodeList
 
 # =============================================================================

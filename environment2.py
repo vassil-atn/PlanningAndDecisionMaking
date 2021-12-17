@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import collision_detection as cd
 import RRT_algorithm as rrt
 
-def init_room(width=20, height=20, n_obst=20, rng_seed=None):
+def init_room(width=30, height=20, n_obst=20, rng_seed=None):
     
     # Init
     seed(rng_seed)
@@ -71,31 +71,28 @@ def draw_room(win, obstacles):
     for obst in obstacles:
         obs = plt.Polygon(obst, color='black', fill=True)
         win.add_patch(obs)
-
     return
 
-# Initialise room with obstacles and start/goal
 
+# Initialise room with obstacles and start/goal
 room_width = 30
 room_height = 20
-
-start, goal, obstacles = init_room(room_width, room_height, n_obst=25, rng_seed=22)
+start, goal, obstacles = init_room(room_width, room_height, n_obst=25, rng_seed=3)
 
 # Draw room
-fig = plt.subplots()
-env = plt.gca()
-env.set_aspect('equal','box')
-plt.xlim([0, room_width])
-plt.ylim([0, room_height])
+fig, ax = plt.subplots()
+ax.set_aspect('equal','box')
+ax.set_xlim([0, room_width])
+ax.set_ylim([0, room_height])
+draw_room(ax, obstacles)
+ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
+ax.add_patch(plt.Circle(goal[0:2],2.5,color='green',fill=False))
 
-draw_room(env, obstacles)
-env.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
-env.add_patch(plt.Circle(goal[0:2],2.5,color='blue',fill=False))
-plt.show()
-
+# Run RRT
 goalConfig = np.array([goal[0],goal[1],0.0,0.0,0.0]) # TODO - convert from endpoint goal to config properly
-NodeList = rrt.RRT(start, goalConfig, 100, obstacles)
+NodeList = rrt.RRT(start, goalConfig, room_width, room_height, ax, 20, obstacles)
 
+# Get path from tree
 currentNode = NodeList[-1]
 path = []
 path.append(NodeList[-1])
@@ -106,9 +103,12 @@ while currentNode != NodeList[0]:
     currentNode = currentNode.parent
 path= path[::-1]
 
+# Plot final path between x & y coords
 for n in range(len(path)-1):
-    plt.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='orange')
+    ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
     
+plt.show()
+
     
     
     
