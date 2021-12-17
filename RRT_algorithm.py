@@ -49,14 +49,18 @@ def steeringFunction(q1,q2,plot=False):
     for i in range(0,int(T/dt)):
     
         # PID CONTROLLER:
-        Kp = 20
-        Ki = 0.1
-        Kd = 0.001
+        Kp = 3
+        Ki = 0.01
+        Kd = 0.01
         
+        lambdaD = 0.001
         # Inverse Dynamics:
     
         J = r.Jacobian(r.u)    
-        J_inv = np.dot(J.T,np.linalg.inv(np.dot(J,J.T)))
+        # Pseudo inverse singularity robust:
+
+        J_inv = J.T.dot(np.linalg.inv(J.dot(J.T)+lambdaD*np.eye(3)))
+        
         
         X = np.array([r.p[0],r.p[1],r.theta])
         
