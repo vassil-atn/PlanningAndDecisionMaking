@@ -21,6 +21,9 @@ class Robot:
             self.theta = phi + np.sum(q) # orientation of the end effector (FIX THIS)
             
             self.phi_dot = 0
+            
+            self.u_limits = 10 # u limit in m/s
+            self.dq_limits = 10 # joint actuator limits in rad/s
             # Define the configuration states:
 
     
