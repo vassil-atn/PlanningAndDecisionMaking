@@ -70,8 +70,6 @@ def steeringFunction(q1,q2,plot=False):
         Q_dot_des = np.dot(J_inv,X_dot_controller)
         
         # Get the desired inputs for the joints and wheels:
-        #u = np.clip(Q_dot_des[0:2],-5,5)
-        #dq = np.clip(Q_dot_des[2:4],-0.5,0.5)
         u = Q_dot_des[0:2]
         dq = Q_dot_des[2:4]
 
@@ -329,7 +327,7 @@ def RRT(start,goal,width,height,ax,N=100,obstacles=None):
         
         if collisionFree(r,q,obstacles) == True:
             print(f'Sample number {i} config is collision free!')
-            plotConfig(ax, q, collision=False, r=r)
+            #plotConfig(ax, q, collision=False, r=r)
             # Find closest vertix in V 
             for idx, node in enumerate(NodeList):
                 distance = findDistance(node.q,q)
@@ -343,8 +341,8 @@ def RRT(start,goal,width,height,ax,N=100,obstacles=None):
                 if collisionFree(r,storeModel[n],obstacles)==0:                    
                     freePath = False
                     print(f'Sample number {i} trajectory has a collision!')
-                    plotPath(ax, q, NodeList[closest_idx].q, collision=True)
-                    plotTrajectory(ax, np.array(storeModel), collision=True,r=r)
+                    #plotPath(ax, q, NodeList[closest_idx].q, collision=True)
+                    #plotTrajectory(ax, np.array(storeModel), collision=True)
 
                     break
                 freePath = True
@@ -355,14 +353,13 @@ def RRT(start,goal,width,height,ax,N=100,obstacles=None):
                 NodeList.append(Node_inst)
                 print(f'Sample number {i} added to tree!')
                 plotPath(ax, q, NodeList[closest_idx].q, collision=False)
-                plotTrajectory(ax, np.array(storeModel), collision=False,r=r)
+                #plotTrajectory(ax, np.array(storeModel), collision=False)
         else:
             print(f'Sample number {i} config has a collision!')
-            plotConfig(ax, q, collision=True, r=r)
+            #plotConfig(ax, q, collision=True)
                 
         # if the goal is close to the last added node        
-        # if (abs(findDistance(NodeList[-1].q,goal)) < 5):
-            
+        #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
         # Define path from last added node to goal:
         storeModel,r = steeringFunction(NodeList[-1].q,goal)
         # Check if path is free:
@@ -374,6 +371,7 @@ def RRT(start,goal,width,height,ax,N=100,obstacles=None):
             
         if freePath == True:
             print(f'Sample number {i} has a path to goal!')
+            #plotTrajectory(ax, np.array(storeModel), collision=False)
             Node_inst = Node(goal)
             Node_inst.parent = NodeList[-1]
             NodeList.append(Node_inst)

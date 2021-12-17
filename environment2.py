@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import collision_detection as cd
 import RRT_algorithm as rrt
+from robotModel import Robot
 
 def init_room(width=30, height=20, n_obst=20, rng_seed=None):
     
@@ -16,6 +17,9 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
     obstacles.append(np.array([[0, wall_thk], [0, height], [wall_thk, height], [wall_thk, wall_thk]]))
     obstacles.append(np.array([[wall_thk, height], [width, height], [width, height-wall_thk], [wall_thk, height-wall_thk]]))
     obstacles.append(np.array([[width, height-wall_thk], [width, wall_thk], [width-wall_thk, wall_thk], [width-wall_thk, height-wall_thk]]))
+    
+    # Extra wall in middle
+    #obstacles.append(np.array([[width/2, wall_thk], [width/2, height-wall_thk-4], [width/2+wall_thk, height-wall_thk-4], [width/2+wall_thk, wall_thk]]))
     
     # Start - the starting robot configuration. Random y pos on LHS of room, with 0 joint angles
     startPos = np.array([uniform(wall_thk+2.5, wall_thk+7), uniform(wall_thk+2.5, height-wall_thk-2.5)])
@@ -77,7 +81,7 @@ def draw_room(win, obstacles):
 # Initialise room with obstacles and start/goal
 room_width = 30
 room_height = 20
-start, goal, obstacles = init_room(room_width, room_height, n_obst=25, rng_seed=3)
+start, goal, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=0)
 
 # Draw room
 fig, ax = plt.subplots()
@@ -90,7 +94,7 @@ ax.add_patch(plt.Circle(goal[0:2],2.5,color='green',fill=False))
 
 # Run RRT
 goalConfig = np.array([goal[0],goal[1],0.0,0.0,0.0]) # TODO - convert from endpoint goal to config properly
-NodeList = rrt.RRT(start, goalConfig, room_width, room_height, ax, 20, obstacles)
+NodeList = rrt.RRT(start, goalConfig, room_width, room_height, ax, 100, obstacles)
 
 # Get path from tree
 currentNode = NodeList[-1]
@@ -103,10 +107,9 @@ while currentNode != NodeList[0]:
     currentNode = currentNode.parent
 path= path[::-1]
 
-# Plot final path between x & y coords
 for n in range(len(path)-1):
     ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
-    
+
 plt.show()
 
     
