@@ -2,8 +2,35 @@ import numpy as np
 from robotModel import Robot
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
-from RRT_algorithm import collisionBox
-from shapely.geometry import Polygon
+#from RRT_algorithm import collisionBox
+from shapely.geometry import Polygon,Point
+
+
+def buildPolygons(r,link_centre,angle): 
+    poly = []
+    link_length = r.l[0]
+    link_width = 0.2
+    r = Robot()
+    R = r.rotationMatrix(angle)
+    poly.append(link_centre + R.dot(np.array([-link_length/2,link_width/2])))
+    poly.append(link_centre + R.dot(np.array([link_length/2,link_width/2])))
+    poly.append(link_centre + R.dot(np.array([link_length/2,-link_width/2])))
+    poly.append(link_centre + R.dot(np.array([-link_length/2,-link_width/2])))
+    return poly
+
+
+def collisionBox(r,q): 
+    mp,p_centre1,p_centre2,_,_ = r.ForwardKinematicsConfig(q)
+    phi = q[2]
+    # for the base it's a circle:
+    base_box = Point(mp).buffer(0.6) # Create a circle centered at the centre of the mobile base with radius 0.5
+    polygon1 = Polygon(buildPolygons(r,p_centre1,r.q[0]+phi))
+    polygon2 = Polygon(buildPolygons(r,p_centre2,q[3]+q[4]+phi))
+    
+    return base_box,polygon1,polygon2
+
+
+
 # Total time in seconds:
 T = 1
 dt = 0.001 # time step
@@ -14,7 +41,7 @@ plt.figure(1)
 r = Robot()
 storeP = np.array([r.p])
 # Define desired pose to reach
-X_des = np.array([0,0,np.pi])
+X_des = np.array([-3,2,np.pi])
 # Initialise some variables:
 error_i = 0
 prev_error = 0
@@ -99,7 +126,8 @@ for i in range(0,int(T/dt)):
     phi += phi_dot*dt
     #p += p_dot*dt
     #theta += theta_dot*dt
-    q += r.dq[:]*dt
+    #q += r.dq[:]*dt
+    q += dq[:]*dt
     p[0] = mp[0] + np.cos(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) - np.sin(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
     p[1] = mp[1] + np.sin(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) + np.cos(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
     theta = phi + q[0] + q[1]
@@ -194,7 +222,7 @@ for i in range(0,int(T/dt)):
         plt.plot(x1,y1)
         plt.plot(x2,y2)
         plt.grid()
-        plt.pause(0.00001)
+        plt.pause(0.1)
         
     
 #plt.show()

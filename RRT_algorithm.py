@@ -27,142 +27,327 @@ def findDistance(q1,q2):
     
     return distance
 
-def steeringFunction(q1,q2,plot=False):
-    # convert q2 to workspace coordinates (x,y,theta), feed into IK model to find the path
-    # MODIFY 
+def integrateNumerically(r,mp_dot,phi_dot,dq,dt):
+    # Integrate numerically:
+    mp = r.mp.copy()
+    phi = r.phi
+    p = r.p.copy()
+    theta = r.theta
+    q = r.q.copy()
+        
+    mp += mp_dot*dt
+    phi += phi_dot*dt
+    q += dq[:]*dt
+    p[0] = mp[0] + np.cos(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) - np.sin(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
+    p[1] = mp[1] + np.sin(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) + np.cos(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
+    theta = phi + q[0] + q[1]
+    
+    # Find position of the first joint (to plot)
+    
+    # Position of the first joint w.r.t the mobile base:
+    p_em = np.array([r.l[0]*np.cos(q[0]),
+                     r.l[0]*np.sin(q[0])])
+    
+    p_joint_1 = np.zeros(2)
+    p_joint_1[0] = mp[0] + np.cos(phi)*p_em[0] - np.sin(phi)*p_em[1]
+    p_joint_1[1] = mp[1] + np.sin(phi)*p_em[0] + np.cos(phi)*p_em[1]
+    
+    return mp,phi,q,p,theta,p_joint_1
+
+def visualizeMovement(r):
+    plt.cla()
+    plt.xlim([-10,10])
+    plt.ylim([-10,10])
+    #plt.axis('equal')
+    ax = plt.gca()
+    ax.set_aspect('equal', adjustable='box')
+    # Plot the body of the robot:
+    robotBody = plt.Circle((r.mp[0], r.mp[1]), r.R, color='r',fill=False)
+    plt.plot([r.mp[0],r.mp[0]+1.5*np.cos(r.phi)],[r.mp[1],r.mp[1]+1.5*np.sin(r.phi)],color='k')
+    ax.add_patch(robotBody)
+    # Plot link 1:
+    plt.plot([r.mp[0],r.p_joint_1[0]],[r.mp[1],r.p_joint_1[1]],color='orange')
+    plt.plot(r.p_joint_1[0],r.p_joint_1[1],'.',color='k')
+    
+    # Plot link 2:
+    plt.plot([r.p_joint_1[0],r.p[0]],[r.p_joint_1[1],r.p[1]],color='orange')
+    # Add the gripper
+    angle = np.rad2deg(r.theta)
+    gripper = Arc((r.p[0]+0.25*np.cos(r.theta), r.p[1]+0.25*np.sin(r.theta)),0.5,0.5,angle+90,0,180, color='r')
+    ax.add_patch(gripper)
+    
+    base_box,polygon1,polygon2 = collisionBox(r, np.array([r.mp[0],r.mp[1],r.phi,r.q[0],r.q[1]]))
+    base_x,base_y = base_box.exterior.xy
+    plt.plot(base_x,base_y,'g')
+    x1,y1 = polygon1.exterior.xy
+    x2,y2 = polygon2.exterior.xy
+    
+    poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+    poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+    poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+    
+    
+    plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+    plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+    plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+            
+    plt.plot(x1,y1)
+    plt.plot(x2,y2)
+    plt.grid()
+    plt.pause(0.001)
+
+def steeringFunction(q_init,q_des,plot=False):
     storeModel = []
-    #mp,p_centre1,p_centre2,joint_1,joint_2 = r.ForwardKinematicsConfig(q1)
-    r = Robot(mp=np.array([q1[0],q1[1]]),phi=q1[2],q=np.array([q1[3],q1[4]]))
-    
-    mp,p_centre1,p_centre2,joint_1,joint_2 = r.ForwardKinematicsConfig(q2)
-    
-    
-    
-    X_des = np.array([joint_2[0],joint_2[1],np.sum(q2[2:5])])
+    r = Robot(mp=np.array([q_init[0],q_init[1]]),phi=q_init[2],q=np.array([q_init[3],q_init[4]]))
+
     T = 3
     dt = 0.01
     prev_error = 0
     error_i = 0
-
+    
+    # Define the direction to move the mobile robot to the desired position
+    vector = np.array([q_des[0]-q_init[0],q_des[1]-q_init[1]])/np.linalg.norm([q_des[0]-q_init[0],q_des[1]-q_init[1]])
+    
+    # PID CONTROLLER:
+    Kp = 50
+    Ki = 0.01
+    Kd = 0.001
+    
+    # Trajectory part 1 - just rotate the phi to the desired direction of movement
     for i in range(0,int(T/dt)):
-    
-        # PID CONTROLLER:
-        Kp = 20
-        Ki = 0.1
-        Kd = 0.001
-        
-        
-        # Inverse Dynamics:
-    
-        J = r.Jacobian(r.u)    
-        J_inv = np.dot(J.T,np.linalg.inv(np.dot(J,J.T)))
-        
-        X = np.array([r.p[0],r.p[1],r.theta])
-        
-        error = X_des - X
+        X_des = [r.mp[0],r.mp[1],np.arctan2(vector[1],vector[0]),r.q[0],r.q[1]]
+        X = r.phi
+
+        error = X_des[2] - X
+        if abs(error)<0.01*np.pi/180:
+            break
         error_d = (prev_error - error)
         error_i = error_i + error
+
+        mp_dot = np.zeros(2) # mobile base doesn't move, only rotates
+        phi_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
+        dq = np.zeros(2) # the manipulator arms are kept fixed
         
-        # Basically x_dot = K*(x_des - x) (plus the integral and derivative terms)
-        X_dot_controller = Kp*error + Ki*error_i*dt + Kd*error_d/dt
+        u = np.array([-phi_dot*r.h,phi_dot*r.h])
         
-        Q_dot_des = np.dot(J_inv,X_dot_controller)
+        # INCLUDE ACTUATION LIMITS
+        phi_dot = (u[1]-u[0])/(2*r.h)
         
-        # Get the desired inputs for the joints and wheels:
-        u = Q_dot_des[0:2]
-        dq = Q_dot_des[2:4]
+        # Integrate numerically
+        mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
         
-        phi_dot = (u[1] - u[0])/(2*r.h)
-        mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
-        
-        # Simulate forward motion with these desired commands:
-        phi_dot = (u[1] - u[0])/(2*r.h)
-        X_dot = r.ForwardKinematics(u,dq,phi_dot)
-        
-        mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
-        # Integrate numerically:
-        mp = r.mp.copy()
-        phi = r.phi
-        p = r.p.copy()
-        theta = r.theta
-        q = r.q.copy()
-            
-        mp += mp_dot*dt
-        phi += phi_dot*dt
- 
-        q += r.dq[:]*dt
-        p[0] = mp[0] + np.cos(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) - np.sin(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
-        p[1] = mp[1] + np.sin(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) + np.cos(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
-        theta = phi + q[0] + q[1]
-        
-        # Position of the first joint w.r.t the mobile base:
-        p_em = np.array([r.l[0]*np.cos(q[0]),
-                         r.l[0]*np.sin(q[0])])
-        p_joint_1 = np.zeros(2)
-        p_joint_1[0] = mp[0] + np.cos(phi)*p_em[0] - np.sin(phi)*p_em[1]
-        p_joint_1[1] = mp[1] + np.sin(phi)*p_em[0] + np.cos(phi)*p_em[1]
-        
-        r.Update(mp,phi,p,theta,q,dq,u,p_joint_1) 
+        r.Update(mp,phi,p,theta,q,dq,np.array([0.0,0.0]),p_joint_1)
+        storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
         
         # Save error for the derivative controller
         prev_error = error
         
+        if plot==True:
+            # Visualize the movement
+            visualizeMovement(r)
+        
+
+    # Trajectory part 2 - move the mobile robot in straight line
+    prev_error = [0,0]
+    error_i = [0,0]
+    for i in range(0,int(T/dt)):
+        X_des = [q_des[0],q_des[1],r.phi,r.q[0],r.q[1]]
+        X = np.array([r.mp[0],r.mp[1]])
+        
+        error = X_des[0:2] - X
+        if (np.absolute(error)<0.0001).all():
+            break
+        error_d = (prev_error - error)
+        error_i = error_i + error
+        
+        mp_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
+        phi_dot = 0 # mobile base doesn't rotate
+        dq = np.zeros(2) # manipulator arms are kept fixed
+        
+        # Integrate numerically
+        mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
+        
+        r.Update(mp,phi,p,theta,q,dq,np.array([0.0,0.0]),p_joint_1)
         storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
         
-        if plot == True:
-                # VISUALISE THE MOVEMENT
-
-            plt.cla()
-            #plt.axis('equal')
-            ax = plt.gca()
-            # Plot the body of the robot:
-            robotBody = plt.Circle((mp[0], mp[1]), r.R, color='r',fill=False)
-            plt.plot([mp[0],mp[0]+0.8*np.cos(phi)],[mp[1],mp[1]+0.8*np.sin(phi)])
-            ax.add_patch(robotBody)
-            # Plot link 1:
-            plt.plot([mp[0],p_joint_1[0]],[mp[1],p_joint_1[1]],color='orange')
-            plt.plot(p_joint_1[0],p_joint_1[1],'.',color='k')
-            #
-            # Plot link 2:
-            #
-        # =============================================================================
-        #     p_joint_2 = np.array([0,0])
-        #     p_joint_2[0] = p_joint_1[0] + r.l[1]*np.cos(r.q[0]+r.q[1])
-        #     p_joint_2[1] = p_joint_1[1] + r.l[1]*np.sin(r.q[0]+r.q[1])
-        #     plt.plot([p_joint_1[0],p_joint_2[0]],[p_joint_1[1],p_joint_2[1]],color='green')
-        # =============================================================================
-            plt.plot([p_joint_1[0],p[0]],[p_joint_1[1],p[1]],color='orange')
-            # Add the gripper
-            angle = np.rad2deg(theta)
-            gripper = Arc((p[0]+0.25*np.cos(theta), p[1]+0.25*np.sin(theta)),0.5,0.5,angle+90,0,180, color='r')
-            ax.add_patch(gripper)
-            #
-            
-            base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
-            base_x,base_y = base_box.exterior.xy
-            plt.plot(base_x,base_y,'g')
-            x1,y1 = polygon1.exterior.xy
-            x2,y2 = polygon2.exterior.xy
-            
-            poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
-            poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
-            poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
-    
-            
-            plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
-            plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
-            plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
-                    
-            plt.plot(x1,y1)
-            plt.plot(x2,y2)
-            plt.grid()
-            plt.pause(0.00001)
-            plt.show()
+        # Save error for the derivative controller
+        prev_error = error
         
-        if np.all(abs(np.array([r.p[0],r.p[1],r.theta]) - X_des) < 0.01):
+        if plot==True:
+            # Visualize the movement
+            visualizeMovement(r)
+
+    # Trajectory part 3 - rotate phi and [q1,q2] to the desired values
+    prev_error = 0
+    error_i = 0    
+    for i in range(0,int(T/dt)):
+        X_des = [r.mp[0],r.mp[1],q_des[2],q_des[3],q_des[4]]
+        X = np.array([r.phi,r.q[0],r.q[1]])
+        
+        error = X_des[2:] - X
+        if (np.absolute(error)<0.01*np.pi/180).all():
             break
+        error_d = (prev_error - error)
+        error_i = error_i + error
+        
+        mp_dot = np.zeros(2) # mobile base doesn't move, only rotates
+        Q_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
+        phi_dot = Q_dot[0]
+        dq = Q_dot[1:]
+        
+        # Integrate numerically
+        mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
+        
+        r.Update(mp,phi,p,theta,q,dq,np.array([0.0,0.0]),p_joint_1)
+        storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
+        
+        # Save error for the derivative controller
+        prev_error = error
+        
+        if plot==True:
+            # Visualize the movement
+            visualizeMovement(r)
         
     return storeModel,r
+
+# =============================================================================
+# def steeringFunction(q1,q2,plot=False):
+#     # convert q2 to workspace coordinates (x,y,theta), feed into IK model to find the path
+#     # MODIFY 
+#     storeModel = []
+#     #mp,p_centre1,p_centre2,joint_1,joint_2 = r.ForwardKinematicsConfig(q1)
+#     r = Robot(mp=np.array([q1[0],q1[1]]),phi=q1[2],q=np.array([q1[3],q1[4]]))
+#     
+#     mp_des,p_centre1,p_centre2,joint_1,joint_2 = r.ForwardKinematicsConfig(q2)
+#     print(f'mp is {mp_des},joint2 is {joint_2}')
+#     
+#     
+#     X_des = np.array([joint_2[0],joint_2[1],np.sum(q2[2:5])])
+#     T = 3
+#     dt = 0.01
+#     prev_error = 0
+#     error_i = 0
+# 
+#     for i in range(0,int(T/dt)):
+#     
+#         # PID CONTROLLER:
+#         Kp = 20
+#         Ki = 0.1
+#         Kd = 0.001
+#         
+#         
+#         # Inverse Dynamics:
+#     
+#         J = r.Jacobian(r.u)    
+#         J_inv = np.dot(J.T,np.linalg.inv(np.dot(J,J.T)))
+#         
+#         X = np.array([r.p[0],r.p[1],r.theta])
+#         
+#         error = X_des - X
+#         error_d = (prev_error - error)
+#         error_i = error_i + error
+#         
+#         # Basically x_dot = K*(x_des - x) (plus the integral and derivative terms)
+#         X_dot_controller = Kp*error + Ki*error_i*dt + Kd*error_d/dt
+#         
+#         Q_dot_des = np.dot(J_inv,X_dot_controller)
+#         
+#         # Get the desired inputs for the joints and wheels:
+#         u = Q_dot_des[0:2]
+#         dq = Q_dot_des[2:4]
+#         
+#         phi_dot = (u[1] - u[0])/(2*r.h)
+#         mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
+#         
+#         # Integrate numerically:
+#         mp = r.mp.copy()
+#         phi = r.phi
+#         p = r.p.copy()
+#         theta = r.theta
+#         q = r.q.copy()
+#             
+#         mp += mp_dot*dt
+#         phi += phi_dot*dt
+#  
+#         #q += r.dq[:]*dt
+#         q += dq[:]*dt
+#         p[0] = mp[0] + np.cos(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) - np.sin(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
+#         p[1] = mp[1] + np.sin(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) + np.cos(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
+#         theta = phi + q[0] + q[1]
+#         
+#         # Position of the first joint w.r.t the mobile base:
+#         p_em = np.array([r.l[0]*np.cos(q[0]),
+#                          r.l[0]*np.sin(q[0])])
+#         p_joint_1 = np.zeros(2)
+#         p_joint_1[0] = mp[0] + np.cos(phi)*p_em[0] - np.sin(phi)*p_em[1]
+#         p_joint_1[1] = mp[1] + np.sin(phi)*p_em[0] + np.cos(phi)*p_em[1]
+#         
+#         r.Update(mp,phi,p,theta,q,dq,u,p_joint_1) 
+#         
+#         # Save error for the derivative controller
+#         prev_error = error
+#         
+#         storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
+#         
+#         if plot == True:
+#                 # VISUALISE THE MOVEMENT
+# 
+#             plt.cla()
+#             #plt.axis('equal')
+#             ax = plt.gca()  
+#             # Plot the body of the robot:
+#             robotBody = plt.Circle((mp[0], mp[1]), r.R, color='r',fill=False)
+#             plt.plot([mp[0],mp[0]+0.8*np.cos(phi)],[mp[1],mp[1]+0.8*np.sin(phi)])
+#             ax.add_patch(robotBody)
+#             # Plot link 1:
+#             plt.plot([mp[0],p_joint_1[0]],[mp[1],p_joint_1[1]],color='orange')
+#             plt.plot(p_joint_1[0],p_joint_1[1],'.',color='k')
+#             #
+#             # Plot link 2:
+#             #
+#         # =============================================================================
+#         #     p_joint_2 = np.array([0,0])
+#         #     p_joint_2[0] = p_joint_1[0] + r.l[1]*np.cos(r.q[0]+r.q[1])
+#         #     p_joint_2[1] = p_joint_1[1] + r.l[1]*np.sin(r.q[0]+r.q[1])
+#         #     plt.plot([p_joint_1[0],p_joint_2[0]],[p_joint_1[1],p_joint_2[1]],color='green')
+#         # =============================================================================
+#             plt.plot([p_joint_1[0],p[0]],[p_joint_1[1],p[1]],color='orange')
+#             # Add the gripper
+#             angle = np.rad2deg(theta)
+#             gripper = Arc((p[0]+0.25*np.cos(theta), p[1]+0.25*np.sin(theta)),0.5,0.5,angle+90,0,180, color='r')
+#             ax.add_patch(gripper)
+#             #
+#             
+#             base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
+#             base_x,base_y = base_box.exterior.xy
+#             plt.plot(base_x,base_y,'g')
+#             x1,y1 = polygon1.exterior.xy
+#             x2,y2 = polygon2.exterior.xy
+#             
+#             poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+#             poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+#             poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+#     
+#             
+#             plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+#             plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+#             plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+#                     
+#             plt.plot(x1,y1)
+#             plt.plot(x2,y2)
+#             plt.grid()
+#             plt.pause(0.1)
+#             ax.set_xlim(0,10)
+#             ax.set_ylim(0,10)
+#             plt.xlim(0,10)
+#             plt.ylim(0,10)
+#             #plt.show()
+#         
+#         if np.all(abs(np.array([r.p[0],r.p[1],r.theta]) - X_des) < 0.01):
+#             break
+#         
+#     return storeModel,r
+# =============================================================================
 
 def collisionFree(r,q,obstacles=None):
 
@@ -301,7 +486,7 @@ def RRT(start,goal,N=100):
 
 # Simulate:
 start = np.array([0.0,0.0,0.0,0.0,0.0])
-goal = np.array([5.0,5.0,np.pi,0.0,0.0])
+goal = np.array([5.0,5.0,0,0.0,0.0])
 NodeList = RRT(start,goal)
 currentNode = NodeList[-1]
 path = []
@@ -315,7 +500,8 @@ path= path[::-1]
 
 
 # obstacle (just for plotting)
-
+plt.pause(2)
+# 
 for i in range(1,len(path)):
     steeringFunction(path[i-1].q, path[i].q,plot=True)
     
@@ -327,7 +513,11 @@ for i in range(1,len(path)):
     plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
     plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
     plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
-    # Plot positions of the mobile base along the path:
-    plt.plot(path[i-1].q[0],path[i-1].q[1],'x')
+    
+    plt.xlim(0,10)
+    plt.ylim(0,10)
     plt.show()
+
+
+
 
