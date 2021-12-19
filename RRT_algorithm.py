@@ -3,7 +3,7 @@ from robotModel import Robot
 #from shapely.geometry import Polygon,Point
 from collision_detection import checkPolysIntersecting, checkPolyCircleIntersecting
 import matplotlib.pyplot as plt
-from matplotlib.patches import Arc
+#from matplotlib.patches import Arc
 
 
 class Node:
@@ -280,6 +280,7 @@ def plotPath(ax, q1, q2, collision = False):
         ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-r')
     else:
         ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-b')
+        
     plt.show()
     plt.pause(0.001)
 
@@ -300,20 +301,49 @@ def plotTrajectory(ax, traj, collision=False, r = None):
     plt.pause(0.001)
 
 
-def RRT(start,goal,width,height,ax,N=100,obstacles=None):
+def draw_room(win, obstacles):
+    for obst in obstacles:
+        obs = plt.Polygon(obst, color='black', fill=True)
+        win.add_patch(obs)
+    return
+
+
+def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     
     # Init seed for repeatability
-    np.random.seed(1)
+    np.random.seed(2)
         
     NodeList = []
     r = Robot()
     
+    # Draw room
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal','box')
+    ax.set_xlim([0, room_width])
+    ax.set_ylim([0, room_height])
+    draw_room(ax, obstacles)
+    ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
+    ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+    
+    # Define goal configuration based on end effector target TODO - check for collision
+    # Robot is redundant so 2dof can be selected randomly
+    j1_g = np.random.uniform(0,2*np.pi)
+    j2_g = np.random.uniform(0,2*np.pi)
+    # Heading set to ensure correct endpoint orientation
+    phi_g = goal_end[2]-j1_g-j2_g
+    # Base position calculation
+    px_g = r.l[0]*np.cos(j1_g)+r.l[1]*np.cos(j1_g+j2_g)
+    py_g = r.l[0]*np.sin(j1_g)+r.l[1]*np.sin(j1_g+j2_g)
+    mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
+    goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
+    plotConfig(ax,goal,False,r)
+   
     # First add the starting node:
     Node_inst = Node(start)
     NodeList.append(Node_inst)
     # Define sets for each configuration variable:
-    q1_set = np.array([0,width])
-    q2_set = np.array([0,height])
+    q1_set = np.array([0,room_width])
+    q2_set = np.array([0,room_height])
     q3_set = np.array([0,2*np.pi])
     q4_set = np.array([0,2*np.pi])
     q5_set = np.array([0,2*np.pi])
@@ -345,8 +375,8 @@ def RRT(start,goal,width,height,ax,N=100,obstacles=None):
                 if collisionFree(r,storeModel[n],obstacles)==0:                    
                     freePath = False
                     print(f'Sample number {i} trajectory has a collision!')
-                    #plotPath(ax, q, NodeList[closest_idx].q, collision=True)
-                    #plotTrajectory(ax, np.array(storeModel), collision=True)
+                    plotPath(ax, q, NodeList[closest_idx].q, collision=True)
+                    #plotTrajectory(ax, np.array(storeModel), collision=True, r=r)
 
                     break
                 freePath = True
@@ -357,10 +387,10 @@ def RRT(start,goal,width,height,ax,N=100,obstacles=None):
                 NodeList.append(Node_inst)
                 print(f'Sample number {i} added to tree!')
                 plotPath(ax, q, NodeList[closest_idx].q, collision=False)
-                #plotTrajectory(ax, np.array(storeModel), collision=False)
+                #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
         else:
             print(f'Sample number {i} config has a collision!')
-            #plotConfig(ax, q, collision=True)
+            plotConfig(ax, q, collision=True)
                 
         # if the goal is close to the last added node        
         #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
@@ -375,11 +405,41 @@ def RRT(start,goal,width,height,ax,N=100,obstacles=None):
             
         if freePath == True:
             print(f'Sample number {i} has a path to goal!')
-            #plotTrajectory(ax, np.array(storeModel), collision=False)
+            #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
             Node_inst = Node(goal)
             Node_inst.parent = NodeList[-1]
             NodeList.append(Node_inst)
             break
+
+    # Get path from tree
+    currentNode = NodeList[-1]
+    path = []
+    path.append(NodeList[-1])
+    while currentNode != NodeList[0]:
+        path.append(currentNode.parent)
+        currentNode = currentNode.parent
+    path= path[::-1]
+    
+    # Draw final path and intermediate configs
+    for n in range(len(path)-1):
+        ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
+        plotConfig(ax, path[n].q,False,r)
+    plt.show()
+    plt.pause(0.001)
+
+    # New plot for final trajectory
+    fig2, ax2 = plt.subplots()
+    ax2.set_aspect('equal','box')
+    ax2.set_xlim([0, room_width])
+    ax2.set_ylim([0, room_height])
+
+    # Animate the final trajectory
+    for n in range(len(path)-1):
+        traj,r = steeringFunction(path[n].q,path[n+1].q)
+        for traj_q in traj:
+            plt.cla()
+            draw_room(ax2, obstacles)
+            plotConfig(ax2, traj_q, collision=False, r=r)
 
     return NodeList
 
