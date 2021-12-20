@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 
 
 class Node:
-    def __init__(self,q):
+    def __init__(self,q,cost=0):
         self.q = q
         self.parent = None
+        self.cost = cost
 
 
 def HaarMeasure(angle1,angle2):
@@ -101,7 +102,7 @@ def steeringFunction(q_init,q_des,plot=False):
     storeModel = []
     r = Robot(mp=np.array([q_init[0],q_init[1]]),phi=q_init[2],q=np.array([q_init[3],q_init[4]]))
 
-    T = 3
+    T = 10
     dt = 0.01
     prev_error = 0
     error_i = 0
@@ -110,126 +111,95 @@ def steeringFunction(q_init,q_des,plot=False):
     vector = np.array([q_des[0]-q_init[0],q_des[1]-q_init[1]])/np.linalg.norm([q_des[0]-q_init[0],q_des[1]-q_init[1]])
     
     # PID CONTROLLER:
-    Kp = 3
-    Ki = 0.01
-    Kd = 0.01
-    
-    # Trajectory part 1 - just rotate the phi to the desired direction of movement
-    for i in range(0,int(T/dt)):
-        X_des = [r.mp[0],r.mp[1],np.arctan2(vector[1],vector[0]),r.q[0],r.q[1]]
-        X = r.phi
+    Kp = 10
+    Ki = 0.5
+    Kd = 0.1
 
-        error = X_des[2] - X
-        if abs(error)<0.01*np.pi/180:
+    firstRun = np.array([True,True,True])
+
+
+    mode = 0
+    # Steering function
+    for i in range(0,int(T/dt)):
+
+        vector = np.array([q_des[0]-r.mp[0],q_des[1]-r.mp[1]])/np.linalg.norm([q_des[0]-r.mp[0],q_des[1]-r.mp[1]])    
+        X_des = np.array([q_des[0],q_des[1],np.arctan2(vector[1],vector[0]),q_des[3],q_des[4]])
+        X = np.array([r.mp[0],r.mp[1],r.phi,r.q[0],r.q[1]])
+        
+        if np.all(abs(X-q_des) < 0.1):
             break
+        
+        # First make sure the heading to the configuration is correct
+        if abs(X_des[2] - X[2]) > 0.1 and mode != 3:
+            if firstRun[0] == True:
+                error_i = 0
+                prev_error = 0
+            firstRun[0] = False
+            firstRun[1:3] = True
+            error = np.zeros([5])
+            error[2] = X_des[2] - X[2]
+            mode = 1
+
+
+            #
+        # If the heading is correct check the xy position of the base and the joint angles:
+        elif np.any(abs(X_des[0:2] - X[0:2]) > 0.1) or np.any(abs(X_des[3:5] - X[3:5]) > 0.1):
+            if firstRun[1] == True:
+                error_i = 0
+                prev_error = 0
+            firstRun[1] = False
+            firstRun[0] = True
+            firstRun[2] = True
+            error = np.zeros([5])
+            error = X_des - X
+            error[2] = 0
+            mode = 2
+        # Finally ensure that the robot rotates to the desired phi
+        elif abs(q_des[2]- X[2])>0.1:
+            X_des = np.array([q_des[0],q_des[1],q_des[2],q_des[3],q_des[4]])
+            if firstRun[2] == True:
+                error_i = 0
+                prev_error = 0
+            firstRun[2] = False
+            firstRun[0:2] = True
+            error = np.zeros([5])
+            error[2] = X_des[2] - X[2]
+            mode = 3
+        
+        
         error_d = (prev_error - error)
         error_i = error_i + error
-
-        mp_dot = np.zeros(2) # mobile base doesn't move, only rotates
-        phi_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
-        dq = np.zeros(2) # the manipulator arms are kept fixed
-        
-        u = np.array([-phi_dot*r.h,phi_dot*r.h])
-        if abs(u[0])>r.u_limits and u[0]<0:
-            u[0] = -r.u_limits
-            u[1] = r.u_limits
-        if abs(u[0])>r.u_limits and u[1]<0:
-            u[0] = r.u_limits
-            u[1] = -r.u_limits
-        
-        phi_dot = (u[1]-u[0])/(2*r.h)
-        
-        # Integrate numerically
-        mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
-        
-        r.Update(mp,phi,p,theta,q,dq,np.array([0.0,0.0]),p_joint_1)
-        storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
-        
-        # Save error for the derivative controller
-        prev_error = error
-        
-        if plot==True:
-            # Visualize the movement
-            visualizeMovement(r)
-        
-
-    # Trajectory part 2 - move the mobile robot in straight line
-    prev_error = [0,0]
-    error_i = [0,0]
-    for i in range(0,int(T/dt)):
-        X_des = [q_des[0],q_des[1],r.phi,r.q[0],r.q[1]]
-        X = np.array([r.mp[0],r.mp[1]])
-        
-        error = X_des[0:2] - X
-        if (np.absolute(error)<0.0001).all():
-            break
-        error_d = (prev_error - error)
-        error_i = error_i + error
-        
-        mp_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
-        phi_dot = 0 # mobile base doesn't rotate
-        dq = np.zeros(2) # manipulator arms are kept fixed
-        
-        u = np.array([[np.linalg.norm(mp_dot)],[np.linalg.norm(mp_dot)]])
-        if u[0]>r.u_limits:
-            u = np.array([[r.u_limits],[r.u_limits]])
             
-        mp_dot = np.array([[np.cos(r.phi)/2,np.cos(r.phi)/2],[np.sin(r.phi)/2,np.sin(r.phi)/2]])@u
-        mp_dot = np.reshape(mp_dot,2)
-        
-        # Integrate numerically
-        mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
-        
-        r.Update(mp,phi,p,theta,q,dq,np.array([0.0,0.0]),p_joint_1)
-        storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
-        
-        # Save error for the derivative controller
-        prev_error = error
-        
-        if plot==True:
-            # Visualize the movement
-            visualizeMovement(r)
 
-    # Trajectory part 3 - rotate phi and [q1,q2] to the desired values
-    prev_error = 0
-    error_i = 0    
-    for i in range(0,int(T/dt)):
-        X_des = [r.mp[0],r.mp[1],q_des[2],q_des[3],q_des[4]]
-        X = np.array([r.phi,r.q[0],r.q[1]])
+        X_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
+
+
+        mp_dot_des = X_dot[0:2]
+
+        phi_dot_des = X_dot[2]
+        dq_des = X_dot[3:5]
         
-        error = X_des[2:] - X
-        if (np.absolute(error)<0.01*np.pi/180).all():
-            break
-        error_d = (prev_error - error)
-        error_i = error_i + error
+        # If the robot needs to move to target the u_des is different than when it needs to rotate:
+        if mode == 1 or mode == 3:
+            u_des = np.array([-phi_dot_des*r.h,phi_dot_des*r.h])
+        else:
+            u_des = np.array([np.linalg.norm(mp_dot_des),np.linalg.norm(mp_dot_des)])
         
-        mp_dot = np.zeros(2) # mobile base doesn't move, only rotates
-        Q_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
-        phi_dot = Q_dot[0]
-        dq = Q_dot[1:]
         
-        u = np.array([-phi_dot*r.h,phi_dot*r.h])
-        if abs(u[0])>r.u_limits and u[0]<0:
-            u[0] = -r.u_limits
-            u[1] = r.u_limits
-        if abs(u[0])>r.u_limits and u[1]<0:
-            u[0] = r.u_limits
-            u[1] = -r.u_limits
-        if abs(dq[0])>r.dq_limits and dq[0]>0:
-            dq[0] = r.dq_limits
-        if abs(dq[0])>r.dq_limits and dq[0]<0:
-            dq[0] = -r.dq_limits
-        if dq[1]>r.dq_limits and dq[1]>0:
-            dq[1] = r.dq_limits
-        if dq[1]>r.dq_limits and dq[1]<0:
-            dq[1] = -r.dq_limits
-        
-        phi_dot = (u[1]-u[0])/(2*r.h)
-        
+        u_des = np.clip(u_des,-r.u_limits,r.u_limits)
+        dq_des = np.clip(dq_des,-r.dq_limits,r.dq_limits)
+        # Simulate the movement:
+        phi_dot = (u_des[1]-u_des[0])/(2*r.h)
+        mp_dot = ((np.array([[np.cos(r.phi)/2,np.cos(r.phi)/2],[np.sin(r.phi)/2,np.sin(r.phi)/2]])).dot(u_des)).T
+        #mp_dot = np.reshape(mp_dot,2)
+        dq = dq_des.copy()
         # Integrate numerically
         mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
         
-        r.Update(mp,phi,p,theta,q,dq,np.array([0.0,0.0]),p_joint_1)
+        r.Update(mp,phi,p,theta,q,dq,np.array([0.0,0.0]),p_joint_1) 
+
+        # Save error for the derivative controller
+        prev_error = error     
         storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
         
         # Save error for the derivative controller
@@ -467,4 +437,108 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
             draw_room(ax2, obstacles)
             plotConfig(ax2, traj_q, collision=False, r=r)
 
+    return NodeList
+
+# This function finds the nearest nodes around the new node in a given radius
+def findNearestNodes(q,NodeList):
+    nearest_nodes = []
+    radius = 3 # Define the radius in which to check for more optimal paths
+    for idx,node in enumerate(NodeList):
+        if findDistance(node,q) < radius:
+            nearest_nodes.append(idx)
+    return nearest_nodes
+# This function finds the lowest cost node in the vicinity of the new node
+# to be selected as a candidate for its parent node
+def chooseParent(NodeList,nearest_nodes,q):
+    min_cost = float('inf')
+    for i in enumerate(nearest_nodes):
+        cost = NodeList[nearest_nodes[i]].cost + findDistance(NodeList[nearest_nodes[i]],q)
+        if  cost < min_cost:
+            min_cost = cost
+            parent_node = NodeList[nearest_nodes[i]]
+            parent_index = nearest_nodes[i]
+    return parent_node,parent_index
+#
+#
+# This function updates the costs of leaves once their parent node's cost has been updated
+def changeLeavesCost(rewired_node,NodeList): 
+    for node in NodeList:
+        if node.parent == rewired_node:
+            node.cost = rewired_node.cost + findDistance(rewired_node,node)
+        
+
+def RRT_star(start,goal,N):
+    NodeList = []
+    plt.figure(1)
+    r = Robot()
+    # First add the starting node:
+    Node_inst = Node(start)
+    NodeList.append(Node_inst)
+    # Define sets for each configuration variable:
+    q1_set = np.array([0,10])
+    q2_set = np.array([0,10])
+    q3_set = np.array([0,2*np.pi])
+    q4_set = np.array([0,2*np.pi])
+    q5_set = np.array([0,2*np.pi])
+    
+    for i in range(0,N):
+
+        print(f'Running sample number {i}')
+
+        # Pick a random point in C-space
+        q = np.array([np.random.uniform(q1_set[0],q1_set[1]),
+                      np.random.uniform(q2_set[0],q2_set[1]),
+                      np.random.uniform(q3_set[0],q3_set[1]),
+                      np.random.uniform(q4_set[0],q4_set[1]),
+                      np.random.uniform(q5_set[0],q5_set[1])])
+        
+        if collisionFree(r,q) == True:
+            nearest_nodes = findNearestNodes(q,NodeList)
+            for i in enumerate(nearest_nodes):
+                # Choose the best candidate for the parent node:
+                parent_node,parent_index = chooseParent(NodeList,nearest_nodes,q)
+                # NEED TO CREATE THIS FUNCTION WITH THE NEW STEERING FN:
+                if collisionFreePath(parent_node,q): # Here check if the path is collision free
+                    Node_inst = Node(q)
+                    Node_inst.parent = parent_node
+                    Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent,q)
+                    NodeList.append(Node_inst)
+                    break
+                else:
+                    nearest_nodes.remove(parent_index) # remove the best candidate from the nearest_nodes
+                    # and check the next one
+        
+            
+        # Check if any of the nearby nodes need to be updated due to the new node:
+        nearest_nodes = findNearestNodes(q,NodeList) 
+        for i in enumerate(nearest_nodes):
+            dist = findDistance(NodeList[-1],NodeList[i]) # distance between new node and nearest_nodes
+            if  (dist + NodeList[-1].cost) < NodeList[i].cost:
+                # If the cost through the new node to some nearest node is lower than that node's
+                # original cost - update it
+                NodeList[i].parent = NodeList[-1]
+                NodeList[i].cost = dist + NodeList[-1].cost
+                # Recursively change the cost of each leaf of the reconnected node
+                changeLeavesCost(NodeList[i],NodeList)
+                
+        # CHECK THE GOAL CONDITION:
+        
+        # if the goal is close to the last added node        
+        #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
+        # Define path from last added node to goal:
+        storeModel,r = steeringFunction(NodeList[-1].q,goal)
+        # Check if path is free:
+        for n in range(len(storeModel)):
+            if collisionFree(r,storeModel[n])==0:
+                freePath = False
+                break
+            freePath = True
+            
+        if freePath == True:
+            Node_inst = Node(goal)
+            Node_inst.parent = NodeList[-1]
+            NodeList.append(Node_inst)
+            break
+
+    print("Path successfuly found!")
     return NodeList
