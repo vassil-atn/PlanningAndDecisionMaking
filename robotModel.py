@@ -7,7 +7,7 @@ class Robot:
             self.h = 0.4 # distance between center and the wheel
             self.q = q # joint positions
             self.dq =  np.array([0.0, 0.0]) # joint velocities
-            self.u = np.array([0.0,0.0]) # velocities of wheels
+            self.u = np.array([1.0,1.0]) # velocities of wheels
             self.phi = phi # orientation (heading) of the mobile base
             # Position of the mobile base:
             self.mp = mp
@@ -26,7 +26,8 @@ class Robot:
             self.theta = phi + np.sum(q) # orientation of the end effector (FIX THIS)
             
             self.phi_dot = (self.u[1] - self.u[0])/(2*self.h)
-            # Define the configuration states:
+            self.u_limits = 10
+            self.dq_limits = 10
 
     
         def rotationMatrix(self,a):

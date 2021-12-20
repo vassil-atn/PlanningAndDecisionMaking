@@ -125,9 +125,9 @@ error_i = 0
 prev_error = 0
 
 # PID CONTROLLER:
-Kp = 50
+Kp = 3
 Ki = 0.01
-Kd = 0.001
+Kd = 0.01
 
 # Trajectory part 1 - just rotate the phi to the desired direction of movement
 for i in range(0,int(T/dt)):
@@ -143,6 +143,16 @@ for i in range(0,int(T/dt)):
     mp_dot = np.zeros(2)
     phi_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
     dq = np.zeros(2)
+    
+    u = np.array([-phi_dot*r.h,phi_dot*r.h])
+    if abs(u[0])>r.u_limits and u[0]<0:
+        u[0] = -r.u_limits
+        u[1] = r.u_limits
+    if abs(u[0])>r.u_limits and u[1]<0:
+        u[0] = r.u_limits
+        u[1] = -r.u_limits
+    
+    phi_dot = (u[1]-u[0])/(2*r.h)
     
     # Integrate numerically
     mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
@@ -173,6 +183,13 @@ for i in range(0,int(T/dt)):
     phi_dot = 0
     dq = np.zeros(2)
     
+    u = np.array([[np.linalg.norm(mp_dot)],[np.linalg.norm(mp_dot)]])
+    if u[0]>r.u_limits:
+        u = np.array([[r.u_limits],[r.u_limits]])
+        
+    mp_dot = np.array([[np.cos(r.phi)/2,np.cos(r.phi)/2],[np.sin(r.phi)/2,np.sin(r.phi)/2]])@u
+    mp_dot = np.reshape(mp_dot,2)
+    
     # Integrate numerically
     mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
     
@@ -201,6 +218,24 @@ for i in range(0,int(T/dt)):
     Q_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
     phi_dot = Q_dot[0]
     dq = Q_dot[1:]
+    
+    u = np.array([-phi_dot*r.h,phi_dot*r.h])
+    if abs(u[0])>r.u_limits and u[0]<0:
+        u[0] = -r.u_limits
+        u[1] = r.u_limits
+    if abs(u[0])>r.u_limits and u[1]<0:
+        u[0] = r.u_limits
+        u[1] = -r.u_limits
+    if abs(dq[0])>r.dq_limits and dq[0]>0:
+        dq[0] = r.dq_limits
+    if abs(dq[0])>r.dq_limits and dq[0]<0:
+        dq[0] = -r.dq_limits
+    if dq[1]>r.dq_limits and dq[1]>0:
+        dq[1] = r.dq_limits
+    if dq[1]>r.dq_limits and dq[1]<0:
+        dq[1] = -r.dq_limits
+    
+    phi_dot = (u[1]-u[0])/(2*r.h)
     
     # Integrate numerically
     mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
