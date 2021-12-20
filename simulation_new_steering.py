@@ -126,9 +126,9 @@ error_i = 0
 prev_error = 0
 
 # PID CONTROLLER:
-Kp = 4
-Ki = 0.1
-Kd = 0.005
+Kp = 10
+Ki = 0.5
+Kd = 0.1
 
 firstRun = np.array([True,True,True])
 
@@ -147,9 +147,7 @@ for i in range(0,int(T/dt)):
             error_i = 0
             prev_error = 0
         firstRun[0] = False
-# =============================================================================
-#         firstRun[1:3] = True
-# =============================================================================
+        firstRun[1:3] = True
         error = np.zeros([5])
         error[2] = X_des[2] - X[2]
         print("mode 1")
@@ -163,10 +161,8 @@ for i in range(0,int(T/dt)):
             error_i = 0
             prev_error = 0
         firstRun[1] = False
-# =============================================================================
-#         firstRun[0] = True
-#         firstRun[2] = True
-# =============================================================================
+        firstRun[0] = True
+        firstRun[2] = True
         error = np.zeros([5])
         error = X_des - X
         error[2] = 0
@@ -179,9 +175,7 @@ for i in range(0,int(T/dt)):
             error_i = 0
             prev_error = 0
         firstRun[2] = False
-# =============================================================================
-#         firstRun[0:2] = True
-# =============================================================================
+        firstRun[0:2] = True
         error = np.zeros([5])
         error[2] = X_des[2] - X[2]
         mode = 3
@@ -208,7 +202,7 @@ for i in range(0,int(T/dt)):
     
     
     u_des = np.clip(u_des,-r.u_limits,r.u_limits)
-    
+    dq_des = np.clip(dq_des,-r.dq_limits,r.dq_limits)
     # Simulate the movement:
     phi_dot = (u_des[1]-u_des[0])/(2*r.h)
     mp_dot = ((np.array([[np.cos(r.phi)/2,np.cos(r.phi)/2],[np.sin(r.phi)/2,np.sin(r.phi)/2]])).dot(u_des)).T
