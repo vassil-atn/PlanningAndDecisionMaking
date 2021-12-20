@@ -349,27 +349,22 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     # First add the starting node:
     Node_inst = Node(start)
     NodeList.append(Node_inst)
-    # Define sets for each configuration variable:
-    q1_set = np.array([0,room_width])
-    q2_set = np.array([0,room_height])
-    q3_set = np.array([0,2*np.pi])
-    q4_set = np.array([0,2*np.pi])
-    q5_set = np.array([0,2*np.pi])
     
     for i in range(0,N):
 
         print(f'Running sample number {i}')
         best_distance = float('inf')
         # Pick a random point in C-space
-        q = np.array([np.random.uniform(q1_set[0],q1_set[1]),
-                      np.random.uniform(q2_set[0],q2_set[1]),
-                      np.random.uniform(q3_set[0],q3_set[1]),
-                      np.random.uniform(q4_set[0],q4_set[1]),
-                      np.random.uniform(q5_set[0],q5_set[1])])
+        q = np.array([np.random.uniform(0,room_width),
+                      np.random.uniform(0,room_height),
+                      np.random.uniform(0,2*np.pi),
+                      np.random.uniform(0,2*np.pi),
+                      np.random.uniform(0,2*np.pi)])
         
         if collisionFree(r,q,obstacles) == True:
             print(f'Sample number {i} config is collision free!')
             #plotConfig(ax, q, collision=False, r=r)
+            
             # Find closest vertix in V 
             for idx, node in enumerate(NodeList):
                 distance = findDistance(node.q,q)
@@ -452,6 +447,15 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     return NodeList
 
 
+# Function to check if a trajectory between two configurations has any collisions
+def pathCollisionFree(q1, q2, obstacles):
+    storeModel,r = steeringFunction(q1,q2)
+    for n in range(len(storeModel)):
+        if collisionFree(r,storeModel[n],obstacles)==0:
+            return False
+    return True
+
+
 # This function finds the nearest nodes around the new node in a given radius
 def findNearestNodes(q,NodeList):
     nearest_nodes = []
@@ -482,38 +486,67 @@ def changeLeavesCost(rewired_node,NodeList):
             node.cost = rewired_node.cost + findDistance(rewired_node,node)
         
 
-def RRT_star(start,goal,N):
+def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
+    
+    # Init seed for repeatability
+    np.random.seed(2)
+    
     NodeList = []
-    plt.figure(1)
     r = Robot()
+    
+    # Draw room
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal','box')
+    ax.set_xlim([0, room_width])
+    ax.set_ylim([0, room_height])
+    draw_room(ax, obstacles)
+    ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
+    ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+    
+    # Define goal configuration based on end effector target TODO - check for collision
+    # Robot is redundant so 2dof can be selected randomly
+    j1_g = np.random.uniform(0,2*np.pi)
+    j2_g = np.random.uniform(0,2*np.pi)
+    # Heading set to ensure correct endpoint orientation
+    phi_g = goal_end[2]-j1_g-j2_g
+    # Base position calculation
+    px_g = r.l[0]*np.cos(j1_g)+r.l[1]*np.cos(j1_g+j2_g)
+    py_g = r.l[0]*np.sin(j1_g)+r.l[1]*np.sin(j1_g+j2_g)
+    mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
+    goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
+    plotConfig(ax,goal,False,r)
+   
     # First add the starting node:
     Node_inst = Node(start)
     NodeList.append(Node_inst)
-    # Define sets for each configuration variable:
-    q1_set = np.array([0,10])
-    q2_set = np.array([0,10])
-    q3_set = np.array([0,2*np.pi])
-    q4_set = np.array([0,2*np.pi])
-    q5_set = np.array([0,2*np.pi])
     
     for i in range(0,N):
 
         print(f'Running sample number {i}')
-
         # Pick a random point in C-space
-        q = np.array([np.random.uniform(q1_set[0],q1_set[1]),
-                      np.random.uniform(q2_set[0],q2_set[1]),
-                      np.random.uniform(q3_set[0],q3_set[1]),
-                      np.random.uniform(q4_set[0],q4_set[1]),
-                      np.random.uniform(q5_set[0],q5_set[1])])
+        q = np.array([np.random.uniform(0,room_width),
+                      np.random.uniform(0,room_height),
+                      np.random.uniform(0,2*np.pi),
+                      np.random.uniform(0,2*np.pi),
+                      np.random.uniform(0,2*np.pi)])
         
-        if collisionFree(r,q) == True:
+        if collisionFree(r,q,obstacles) == True:
+            print(f'Sample number {i} config is collision free!')
+            #plotConfig(ax, q, collision=False, r=r)
+            
             nearest_nodes = findNearestNodes(q,NodeList)
             for i in enumerate(nearest_nodes):
                 # Choose the best candidate for the parent node:
                 parent_node,parent_index = chooseParent(NodeList,nearest_nodes,q)
-                # NEED TO CREATE THIS FUNCTION WITH THE NEW STEERING FN:
-                if collisionFreePath(parent_node,q): # Here check if the path is collision free
+                # Simulate movement to the candidate node and check for collisions
+                storeModel,r = steeringFunction(parent_node.q,q)
+                freePath = True
+                for n in range(len(storeModel)):
+                    if collisionFree(r,storeModel[n],obstacles)==0:
+                        freePath = False
+                        break
+                
+                if freePath == True:
                     Node_inst = Node(q)
                     Node_inst.parent = parent_node
                     Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent,q)
@@ -522,20 +555,37 @@ def RRT_star(start,goal,N):
                 else:
                     nearest_nodes.remove(parent_index) # remove the best candidate from the nearest_nodes
                     # and check the next one
-        
             
-        # Check if any of the nearby nodes need to be updated due to the new node:
-        nearest_nodes = findNearestNodes(q,NodeList) 
-        for i in enumerate(nearest_nodes):
-            dist = findDistance(NodeList[-1],NodeList[i]) # distance between new node and nearest_nodes
-            if  (dist + NodeList[-1].cost) < NodeList[i].cost:
-                # If the cost through the new node to some nearest node is lower than that node's
-                # original cost - update it
-                NodeList[i].parent = NodeList[-1]
-                NodeList[i].cost = dist + NodeList[-1].cost
-                # Recursively change the cost of each leaf of the reconnected node
-                changeLeavesCost(NodeList[i],NodeList)
-                
+            # Check if any of the nearby nodes need to be updated due to the new node:
+            # Reuse nearest_nodes since the only ones removed had collision to the new node
+            for i in enumerate(nearest_nodes):
+                dist = findDistance(NodeList[-1],NodeList[i]) # distance between new node and nearest_nodes
+                if  (dist + NodeList[-1].cost) < NodeList[i].cost:
+                    # Simulate movement to the candidate node and check for collisions
+                    storeModel,r = steeringFunction(NodeList[-1].q,NodeList[i].q)
+                    freePath = True
+                    for n in range(len(storeModel)):
+                        if collisionFree(r,storeModel[n],obstacles)==0:
+                            freePath = False
+                            break
+                        
+                    if freePath == True:
+                        # If the cost through the new node to some nearest node is lower than that node's
+                        # original cost - update it
+                        NodeList[i].parent = NodeList[-1]
+                        NodeList[i].cost = dist + NodeList[-1].cost
+                        # Recursively change the cost of each leaf of the reconnected node
+                        changeLeavesCost(NodeList[i],NodeList)
+        
+        # Draw the new tree
+        plt.cla()
+        draw_room(ax, obstacles)
+        ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
+        ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+        for i in range(len(NodeList)):
+            if(i != 0):
+                plotPath(ax, NodeList[i].q, NodeList[i].parent.q)
+        
         # CHECK THE GOAL CONDITION:
         
         # if the goal is close to the last added node        
@@ -544,16 +594,47 @@ def RRT_star(start,goal,N):
         storeModel,r = steeringFunction(NodeList[-1].q,goal)
         # Check if path is free:
         for n in range(len(storeModel)):
-            if collisionFree(r,storeModel[n])==0:
+            if collisionFree(r,storeModel[n],obstacles)==0:
                 freePath = False
                 break
             freePath = True
             
         if freePath == True:
+            print(f'Sample number {i} has a path to goal!')
+            #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
             Node_inst = Node(goal)
             Node_inst.parent = NodeList[-1]
             NodeList.append(Node_inst)
             break
+        
+    # Get path from tree
+    currentNode = NodeList[-1]
+    path = []
+    path.append(NodeList[-1])
+    while currentNode != NodeList[0]:
+        path.append(currentNode.parent)
+        currentNode = currentNode.parent
+    path= path[::-1]
+    
+    # Draw final path and intermediate configs
+    for n in range(len(path)-1):
+        ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
+        plotConfig(ax, path[n].q,False,r)
+    plt.show()
+    plt.pause(0.001)
 
-    print("Path successfuly found!")
+    # New plot for final trajectory
+    fig2, ax2 = plt.subplots()
+    ax2.set_aspect('equal','box')
+    ax2.set_xlim([0, room_width])
+    ax2.set_ylim([0, room_height])
+
+    # Animate the final trajectory
+    for n in range(len(path)-1):
+        traj,r = steeringFunction(path[n].q,path[n+1].q)
+        for traj_q in traj:
+            plt.cla()
+            draw_room(ax2, obstacles)
+            plotConfig(ax2, traj_q, collision=False, r=r)
+
     return NodeList
