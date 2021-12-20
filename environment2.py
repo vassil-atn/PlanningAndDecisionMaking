@@ -74,7 +74,7 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
 # Initialise room with obstacles and start/goal
 room_width = 30
 room_height = 20
-start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=2)
+start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=1)
 
 # Run RRT
 NodeList = rrt.RRT(start, goal_end, room_width, room_height, 100, obstacles)

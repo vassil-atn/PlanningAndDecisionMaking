@@ -1,9 +1,7 @@
 import numpy as np
 from robotModel import Robot
-#from shapely.geometry import Polygon,Point
 from collision_detection import checkPolysIntersecting, checkPolyCircleIntersecting
 import matplotlib.pyplot as plt
-#from matplotlib.patches import Arc
 
 
 class Node:
@@ -28,6 +26,7 @@ def findDistance(q1,q2):
     distance = np.linalg.norm(q1[0:2] - q2[0:2]) + HaarMeasure(q1[2],q2[2]) + HaarMeasure(q1[3],q2[3])
     
     return distance
+
 
 def integrateNumerically(r,mp_dot,phi_dot,dq,dt):
     # Integrate numerically:
@@ -55,6 +54,7 @@ def integrateNumerically(r,mp_dot,phi_dot,dq,dt):
     p_joint_1[1] = mp[1] + np.sin(phi)*p_em[0] + np.cos(phi)*p_em[1]
     
     return mp,phi,q,p,theta,p_joint_1
+
 
 def visualizeMovement(r):
     plt.cla()
@@ -97,6 +97,7 @@ def visualizeMovement(r):
     plt.plot(x2,y2)
     plt.grid()
     plt.pause(0.001)
+
 
 def steeringFunction(q_init,q_des,plot=False):
     storeModel = []
@@ -205,11 +206,14 @@ def steeringFunction(q_init,q_des,plot=False):
         # Save error for the derivative controller
         prev_error = error
         
-        if plot==True:
-            # Visualize the movement
-            visualizeMovement(r)
+# =============================================================================
+#         if plot==True:
+#             # Visualize the movement
+#             visualizeMovement(r)
+# =============================================================================
         
     return storeModel,r
+
 
 def collisionFree(r,q,obstacles=None):
 
@@ -230,6 +234,7 @@ def collisionFree(r,q,obstacles=None):
                 break
 
     return collision_free
+
 
 # This function finds the collision polygons for the robot links only
 def collisionBox(r,q): 
@@ -253,17 +258,24 @@ def collisionBox(r,q):
     
     return l1_poly,l2_poly
 
+
 def plotConfig(ax, q, collision = False, r = None):
+    # Mobile base position
     if collision:
         ax.plot(q[0],q[1],'or')
     else:
         ax.plot(q[0],q[1],'ob')
         
+    # Full configuration       
     if r != None:
+        # Heading
+        ax.plot([q[0],q[0]+0.75*np.cos(q[2])],[q[1],q[1]+0.5*np.sin(q[2])],color='k')
+        # Mobile base
         if collision:
             ax.add_patch(plt.Circle((q[0], q[1]), r.R, color='r',fill=False))
         else:
             ax.add_patch(plt.Circle((q[0], q[1]), r.R, color='b',fill=False))
+        # Arms
         _,_,_,j1,j2 = r.ForwardKinematicsConfig(q)
         ax.plot([q[0],j1[0],j2[0]],[q[1],j1[1],j2[1]],'k')
         
@@ -439,6 +451,7 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
 
     return NodeList
 
+
 # This function finds the nearest nodes around the new node in a given radius
 def findNearestNodes(q,NodeList):
     nearest_nodes = []
@@ -447,6 +460,8 @@ def findNearestNodes(q,NodeList):
         if findDistance(node,q) < radius:
             nearest_nodes.append(idx)
     return nearest_nodes
+
+
 # This function finds the lowest cost node in the vicinity of the new node
 # to be selected as a candidate for its parent node
 def chooseParent(NodeList,nearest_nodes,q):
@@ -458,8 +473,8 @@ def chooseParent(NodeList,nearest_nodes,q):
             parent_node = NodeList[nearest_nodes[i]]
             parent_index = nearest_nodes[i]
     return parent_node,parent_index
-#
-#
+
+
 # This function updates the costs of leaves once their parent node's cost has been updated
 def changeLeavesCost(rewired_node,NodeList): 
     for node in NodeList:
