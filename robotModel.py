@@ -29,6 +29,7 @@ class Robot:
             self.u_limits = 10
             self.dq_limits = 10
 
+
     
         def rotationMatrix(self,a):
             R = np.array([[np.cos(a),-np.sin(a)],
