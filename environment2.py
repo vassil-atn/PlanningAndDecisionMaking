@@ -33,14 +33,15 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
         # New random poly 
         a = uniform(2*wall_thk, width-2*wall_thk)
         b = uniform(2*wall_thk, height-2*wall_thk)
+        margin=1.5
         x1 = uniform(a-2, a)
-        y1 = uniform(b-2, b)
+        y1 = uniform(b-2,min(b-2+margin*abs(x1-a),b))
         x2 = uniform(a-2, a)
-        y2 = uniform(b, b+2)
+        y2 = uniform(max(b+2-margin*abs(x2-a),b), b+2)
         x3 = uniform(a, a+2)
-        y3 = uniform(b, b+2)
+        y3 = uniform(max(b+2-margin*abs(x3-a),b), b+2)
         x4 = uniform(a, a+2)
-        y4 = uniform(b-2, b)
+        y4 = uniform(b-2, min(b-2+margin*abs(x4-a),b))
         poly1 = np.array([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
         
         # Pre emptively add new poly to list
