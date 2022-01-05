@@ -496,6 +496,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     np.random.seed(2)
     
     NodeList = []
+    goalNode_index = None
     r = Robot()
     
     # Draw room
@@ -539,10 +540,12 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
             #plotConfig(ax, q, collision=False, r=r)
             
             nearest_nodes = findNearestNodes(q,NodeList,newAddedNode=1)
+            if goalNode_index in nearest_nodes:
+                nearest_nodes.remove(goalNode_index)
             # Iterate over all the nearest nodes until the best parent node with a valid path is found
             # or the list runs out of elements. Each iteration finds the best parent node and if its path
             # isnt collision free it gets removed.
-            for n,_ in enumerate(nearest_nodes):
+            for num_nodes_near in range(len(nearest_nodes)):
                 # Choose the best candidate for the parent node:
                 parent_node,parent_index = chooseParent(NodeList,nearest_nodes,q)
                 # Simulate movement to the candidate node and check for collisions
@@ -590,16 +593,6 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                         # Recursively change the cost of each leaf of the reconnected node
                         changeLeavesCost(NodeList[nearest_node],NodeList)
         
-        # Draw the new tree
-        plt.cla()
-        draw_room(ax, obstacles)
-        ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
-        ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
-        for i in range(1,len(NodeList)):
-            plotConfig(ax, NodeList[i].q, collision=False,show=False)
-            plotPath(ax, NodeList[i].q, NodeList[i].parent.q,show=False)
-            plt.show()
-        
         # CHECK THE GOAL CONDITION:
         
         # if the goal is close to the last added node        
@@ -613,47 +606,66 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 break
             freePath = True
             
-        # NEED TO POTENTIALLY REWIRE THE NODE IF COST IS LOWER?    
         if freePath == True:
             print(f'Sample number {i} has a path to goal!')
-# =============================================================================
-#             dist = findDistance(NodeList[-1].q, goal)
-#             #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
-#             Node_inst = Node(goal)
-#             Node_inst.parent = NodeList[-1]
-#             Node_inst.cost = dist + Node_inst.parent.cost
-#             NodeList.append(Node_inst)
-# =============================================================================
-            #break
+            # If it's the first time we reached the goal, connect it to the new node
+            dist = findDistance(NodeList[-1].q, goal)
+            if goalNode_index == None:       
+                #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
+                Node_inst = Node(goal)
+                Node_inst.parent = NodeList[-1]
+                Node_inst.cost = dist + Node_inst.parent.cost
+                NodeList.append(Node_inst)
+                goalNode_index = len(NodeList)-1
+            # If goal reached before, change the parent to new node if new path cost is lower
+            else:
+                if (dist + NodeList[-1].cost) < (NodeList[goalNode_index].cost):
+                    NodeList[goalNode_index].parent = NodeList[-1]
+                    NodeList[goalNode_index].cost = dist + NodeList[-1].cost
         
-    # Get path from tree
-    currentNode = NodeList[-1]
-    path = []
-    path.append(NodeList[-1])
-    while currentNode != NodeList[0]:
-        path.append(currentNode.parent)
-        currentNode = currentNode.parent
-    path= path[::-1]
+        # Draw the new tree
+        plt.cla()
+        draw_room(ax, obstacles)
+        ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
+        ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+        for j in range(1,len(NodeList)):
+            plotConfig(ax, NodeList[j].q, collision=False,show=False)
+            plotPath(ax, NodeList[j].q, NodeList[j].parent.q,show=False)
+            plt.show()
     
-    # Draw final path and intermediate configs
-    for n in range(len(path)-1):
-        ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
-        plotConfig(ax, path[n].q,False,r)
-    plt.show()
-    plt.pause(0.001)
-
-    # New plot for final trajectory
-    fig2, ax2 = plt.subplots()
-    ax2.set_aspect('equal','box')
-    ax2.set_xlim([0, room_width])
-    ax2.set_ylim([0, room_height])
-
-    # Animate the final trajectory
-    for n in range(len(path)-1):
-        traj,r = steeringFunction(path[n].q,path[n+1].q)
-        for traj_q in traj:
-            plt.cla()
-            draw_room(ax2, obstacles)
-            plotConfig(ax2, traj_q, collision=False, r=r)
+    if goalNode_index == None:
+        print('No path to goal found')
+    else:
+        print('Path to goal found')
+        # Get path from tree
+        currentNode = NodeList[goalNode_index]
+        path = []
+        path.append(currentNode)
+        while currentNode != NodeList[0]:
+            path.append(currentNode.parent)
+            currentNode = currentNode.parent
+        path= path[::-1]
+        
+        # Draw final path and intermediate configs
+        for n in range(len(path)-1):
+            ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
+            plotConfig(ax, path[n].q,False,r)
+        plotConfig(ax, path[-1].q,False,r)
+        plt.show()
+        plt.pause(0.001)
+    
+        # New plot for final trajectory
+        fig2, ax2 = plt.subplots()
+        ax2.set_aspect('equal','box')
+        ax2.set_xlim([0, room_width])
+        ax2.set_ylim([0, room_height])
+    
+        # Animate the final trajectory
+        for n in range(len(path)-1):
+            traj,r = steeringFunction(path[n].q,path[n+1].q)
+            for traj_q in traj:
+                plt.cla()
+                draw_room(ax2, obstacles)
+                plotConfig(ax2, traj_q, collision=False, r=r)
 
     return NodeList
