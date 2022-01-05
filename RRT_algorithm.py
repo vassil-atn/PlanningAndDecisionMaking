@@ -461,7 +461,7 @@ def findNearestNodes(q,NodeList):
     nearest_nodes = []
     radius = 3 # Define the radius in which to check for more optimal paths
     for idx,node in enumerate(NodeList):
-        if findDistance(node,q) < radius:
+        if findDistance(node.q,q) < radius:
             nearest_nodes.append(idx)
     return nearest_nodes
 
@@ -551,6 +551,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                     Node_inst.parent = parent_node
                     Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent,q)
                     NodeList.append(Node_inst)
+                    plotPath(ax, Node_inst.q,Node_inst.parent.q, collision=False)
                     break
                 else:
                     nearest_nodes.remove(parent_index) # remove the best candidate from the nearest_nodes

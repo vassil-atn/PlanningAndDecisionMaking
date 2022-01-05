@@ -12,24 +12,20 @@ class Robot:
             # Position of the mobile base:
             self.mp = mp
             # Initial position of the end effector:
-            # self.p = np.array([(np.sum(self.l))*np.cos(self.phi),
-            #                     (np.sum(self.l))*np.sin(self.phi)])
+            #self.p = np.array([(np.sum(self.l))*np.cos(self.phi),
+            #                   (np.sum(self.l))*np.sin(self.phi)])
             self.p = mp + self.rotationMatrix(phi).dot(np.array([self.l[0]*np.cos(q[0]) + self.l[1]*np.cos(q[0]+q[1]),self.l[0]*np.sin(q[0]) + self.l[1]*np.sin(q[0]+q[1])]))
-            
             # Initial position of the first joint:
-                
-            # self.p_joint_1 = np.array([(self.l[0])*np.cos(self.phi),
-            #                    (self.l[1])*np.sin(self.phi)])
+            #self.p_joint_1 = np.array([(self.l[0])*np.cos(self.phi),
+            #                   (self.l[1])*np.sin(self.phi)])
             self.p_joint_1 = mp + self.rotationMatrix(phi).dot(np.array([self.l[0]*np.cos(q[0]),self.l[0]*np.sin(q[0])]))
-            
             # FIX THIS - I THINK I FIXED IT
             self.theta = phi + np.sum(q) # orientation of the end effector (FIX THIS)
             
-            self.phi_dot = (self.u[1] - self.u[0])/(2*self.h)
+            self.phi_dot = 0
             self.u_limits = 10
             self.dq_limits = 10
-
-
+                
     
         def rotationMatrix(self,a):
             R = np.array([[np.cos(a),-np.sin(a)],
@@ -81,20 +77,6 @@ class Robot:
             J = np.array([[cphi/2 - a, cphi/2 + a, cphi*(-self.l[0]*np.sin(q1)-self.l[1]*np.sin(q1+q2))-sphi*(self.l[0]*np.cos(q1)+self.l[1]*np.cos(q1+q2)), cphi*(-self.l[1]*np.sin(q1+q2))-sphi*(self.l[1]*np.cos(q1+q2))],
                           [sphi/2 - b, sphi/2 + b, sphi*(-self.l[0]*np.sin(q1)-self.l[1]*np.sin(q1+q2))+cphi*(self.l[0]*np.cos(q1)+self.l[1]*np.cos(q1+q2)), sphi*(-self.l[1]*np.sin(q1+q2))+cphi*(self.l[1]*np.cos(q1+q2))],
                           [-1/(2*self.h),1/(2*self.h),1,1]])
-
-# =============================================================================
-#             J = np.array([[cphi/2,cphi/2,0,0],
-#                           [sphi/2,sphi/2,0,0],
-#                           [-1/(2*self.h),1/(2*self.h),0,0],
-#                           [cphi/2 - a, cphi/2 + a, cphi*(-self.l[0]*np.sin(q1)-self.l[1]*np.sin(q1+q2))-sphi*(self.l[0]*np.cos(q1)+self.l[1]*np.cos(q1+q2)), cphi*(-self.l[1]*np.sin(q1+q2))-sphi*(self.l[1]*np.cos(q1+q2))],
-#                           [sphi/2 - b, sphi/2 + b, sphi*(-self.l[0]*np.sin(q1)-self.l[1]*np.sin(q1+q2))+cphi*(self.l[0]*np.cos(q1)+self.l[1]*np.cos(q1+q2)), sphi*(-self.l[1]*np.sin(q1+q2))+cphi*(self.l[1]*np.cos(q1+q2))]])
-# =============================================================================
-# =============================================================================
-#             J = np.array([[cphi/2,cphi/2],
-#                           [sphi/2,sphi/2],
-#                           [-1/(2*self.h),1/(2*self.h)]])    
-# =============================================================================
-            
             return J
         
         def Update(self,mp,phi,p,theta,q,dq,u,p_joint_1):

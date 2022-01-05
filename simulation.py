@@ -2,37 +2,10 @@ import numpy as np
 from robotModel import Robot
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
-#from RRT_algorithm import collisionBox
-from shapely.geometry import Polygon,Point
-
-
-def buildPolygons(r,link_centre,angle): 
-    poly = []
-    link_length = r.l[0]
-    link_width = 0.2
-    r = Robot()
-    R = r.rotationMatrix(angle)
-    poly.append(link_centre + R.dot(np.array([-link_length/2,link_width/2])))
-    poly.append(link_centre + R.dot(np.array([link_length/2,link_width/2])))
-    poly.append(link_centre + R.dot(np.array([link_length/2,-link_width/2])))
-    poly.append(link_centre + R.dot(np.array([-link_length/2,-link_width/2])))
-    return poly
-
-
-def collisionBox(r,q): 
-    mp,p_centre1,p_centre2,_,_ = r.ForwardKinematicsConfig(q)
-    phi = q[2]
-    # for the base it's a circle:
-    base_box = Point(mp).buffer(0.6) # Create a circle centered at the centre of the mobile base with radius 0.5
-    polygon1 = Polygon(buildPolygons(r,p_centre1,r.q[0]+phi))
-    polygon2 = Polygon(buildPolygons(r,p_centre2,q[3]+q[4]+phi))
-    
-    return base_box,polygon1,polygon2
-
-
-
+from RRT_algorithm import collisionBox
+from shapely.geometry import Polygon
 # Total time in seconds:
-T = 3
+T = 1
 dt = 0.001 # time step
 
 plt.figure(1)
@@ -41,7 +14,7 @@ plt.figure(1)
 r = Robot()
 storeP = np.array([r.p])
 # Define desired pose to reach
-X_des = np.array([-4,-2,0])
+X_des = np.array([0,0,np.pi])
 # Initialise some variables:
 error_i = 0
 prev_error = 0
@@ -52,18 +25,19 @@ for i in range(0,int(T/dt)):
 
 
 
+
+
     # PID CONTROLLER:
-    Kp = 3
-    Ki = 0.01
-    Kd = 0.01
+    Kp = 20
+    Ki = 0.1
+    Kd = 0.001
     
-    lambdaD = 0.001
+    
     # Inverse Dynamics:
-        
+
     J = r.Jacobian(r.u)    
-    # Pseudo inverse singularity robust:
-    J_inv = J.T.dot(np.linalg.inv(J.dot(J.T)+lambdaD*np.eye(3)))
-    #J_inv = J.T.dot(np.linalg.inv(J.dot(J.T)))
+    J_inv = np.dot(J.T,np.linalg.inv(np.dot(J,J.T)))
+    
     X = np.array([r.p[0],r.p[1],r.theta])
     
     error = X_des - X
@@ -76,12 +50,8 @@ for i in range(0,int(T/dt)):
     Q_dot_des = np.dot(J_inv,X_dot_controller)
     
     # Get the desired inputs for the joints and wheels:
-    u = np.clip(Q_dot_des[0:2],a_min = -r.u_limits, a_max = r.u_limits)
-    dq = np.clip(Q_dot_des[2:4],a_min = -r.dq_limits, a_max = r.dq_limits)
-# =============================================================================
-#     u = Q_dot_des[0:2]
-#     dq = Q_dot_des[2:4]
-# =============================================================================
+    u = Q_dot_des[0:2]
+    dq = Q_dot_des[2:4]
     
     phi_dot = (u[1] - u[0])/(2*r.h)
     mp_dot = np.array([np.cos(r.phi)*np.sum(u[:])/2, np.sin(r.phi)*np.sum(u[:])/2])
@@ -129,8 +99,7 @@ for i in range(0,int(T/dt)):
     phi += phi_dot*dt
     #p += p_dot*dt
     #theta += theta_dot*dt
-    #q += r.dq[:]*dt
-    q += dq[:]*dt
+    q += r.dq[:]*dt
     p[0] = mp[0] + np.cos(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) - np.sin(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
     p[1] = mp[1] + np.sin(phi)*(r.l[0]*np.cos(q[0]) + r.l[1]*np.cos(q[0]+q[1])) + np.cos(phi)*(r.l[0]*np.sin(q[0]) + r.l[1]*np.sin(q[0]+q[1]))
     theta = phi + q[0] + q[1]
@@ -207,30 +176,26 @@ for i in range(0,int(T/dt)):
         ax.add_patch(gripper)
         #
         
-# =============================================================================
-#         base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
-#         base_x,base_y = base_box.exterior.xy
-#         plt.plot(base_x,base_y,'g')
-#         x1,y1 = polygon1.exterior.xy
-#         x2,y2 = polygon2.exterior.xy
-#         
-#         poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
-#         poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
-#         poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
-# 
-#         
-#         plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
-#         plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
-#         plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
-#                 
-#         plt.plot(x1,y1)
-#         plt.plot(x2,y2)
-# =============================================================================
-        plt.grid()
-        plt.pause(0.1)
+        base_box,polygon1,polygon2 = collisionBox(r, np.array([mp[0],mp[1],phi,q[0],q[1]]))
+        base_x,base_y = base_box.exterior.xy
+        plt.plot(base_x,base_y,'g')
+        x1,y1 = polygon1.exterior.xy
+        x2,y2 = polygon2.exterior.xy
         
-        if np.all(abs(X-X_des) < 0.01):
-            break
+        poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+        poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+        poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+
+        
+        plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+        plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+        plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+                
+        plt.plot(x1,y1)
+        plt.plot(x2,y2)
+        plt.grid()
+        plt.pause(0.00001)
+        
     
 #plt.show()
 plt.plot(storeP[:,0],storeP[:,1],'--')

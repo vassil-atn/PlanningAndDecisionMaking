@@ -80,7 +80,7 @@ def RRT_star(start,goal,N):
         nearest_nodes = findNearestNodes(q,NodeList) 
         for i in enumerate(nearest_nodes):
             dist = findDistance(NodeList[-1],NodeList[i]) # distance between new node and nearest_nodes
-            if  (dist + NodeList[-1].cost) < NodeList[i].cost:
+            if  (dist + NodeList[-1].cost) < NodeList[i].cost and collisionFreePath(NodeList[i-1],NodeList[i]):
                 # If the cost through the new node to some nearest node is lower than that node's
                 # original cost - update it
                 NodeList[i].parent = NodeList[-1]
