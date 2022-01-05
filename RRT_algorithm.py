@@ -259,7 +259,7 @@ def collisionBox(r,q):
     return l1_poly,l2_poly
 
 
-def plotConfig(ax, q, collision = False, r = None):
+def plotConfig(ax, q, collision = False, r = None, show = True):
     # Mobile base position
     if collision:
         ax.plot(q[0],q[1],'or')
@@ -278,18 +278,18 @@ def plotConfig(ax, q, collision = False, r = None):
         # Arms
         _,_,_,j1,j2 = r.ForwardKinematicsConfig(q)
         ax.plot([q[0],j1[0],j2[0]],[q[1],j1[1],j2[1]],'k')
-        
-    plt.show()
+    if show:    
+        plt.show()
     plt.pause(0.001)
 
 
-def plotPath(ax, q1, q2, collision = False):
+def plotPath(ax, q1, q2, collision = False,show=True):
     if collision:
         ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-r')
     else:
         ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-b')
-        
-    plt.show()
+    if show:    
+        plt.show()
     plt.pause(0.001)
 
 
@@ -457,9 +457,10 @@ def pathCollisionFree(q1, q2, obstacles):
 
 
 # This function finds the nearest nodes around the new node in a given radius
-def findNearestNodes(q,NodeList):
+def findNearestNodes(q,NodeList,newAddedNode=0):
     nearest_nodes = []
-    radius = 3 # Define the radius in which to check for more optimal paths
+
+    radius = 20# Define the radius in which to check for more optimal paths
     for idx,node in enumerate(NodeList):
         if findDistance(node.q,q) < radius:
             nearest_nodes.append(idx)
@@ -470,20 +471,23 @@ def findNearestNodes(q,NodeList):
 # to be selected as a candidate for its parent node
 def chooseParent(NodeList,nearest_nodes,q):
     min_cost = float('inf')
-    for i in enumerate(nearest_nodes):
-        cost = NodeList[nearest_nodes[i]].cost + findDistance(NodeList[nearest_nodes[i]],q)
+    for node in nearest_nodes:
+        cost = NodeList[node].cost + findDistance(NodeList[node].q,q)
         if  cost < min_cost:
             min_cost = cost
-            parent_node = NodeList[nearest_nodes[i]]
-            parent_index = nearest_nodes[i]
+            parent_node = NodeList[node]
+            parent_index = node
     return parent_node,parent_index
 
 
 # This function updates the costs of leaves once their parent node's cost has been updated
 def changeLeavesCost(rewired_node,NodeList): 
+    print("CHECK IF CHILDREN NEED TO CHANGE COST")
     for node in NodeList:
         if node.parent == rewired_node:
-            node.cost = rewired_node.cost + findDistance(rewired_node,node)
+            print("CHANGING LEAF COST")
+            node.cost = rewired_node.cost + findDistance(rewired_node.q,node.q)
+            changeLeavesCost(node,NodeList)
         
 
 def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
@@ -534,8 +538,11 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
             print(f'Sample number {i} config is collision free!')
             #plotConfig(ax, q, collision=False, r=r)
             
-            nearest_nodes = findNearestNodes(q,NodeList)
-            for i in enumerate(nearest_nodes):
+            nearest_nodes = findNearestNodes(q,NodeList,newAddedNode=1)
+            # Iterate over all the nearest nodes until the best parent node with a valid path is found
+            # or the list runs out of elements. Each iteration finds the best parent node and if its path
+            # isnt collision free it gets removed.
+            for n,_ in enumerate(nearest_nodes):
                 # Choose the best candidate for the parent node:
                 parent_node,parent_index = chooseParent(NodeList,nearest_nodes,q)
                 # Simulate movement to the candidate node and check for collisions
@@ -544,14 +551,18 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 for n in range(len(storeModel)):
                     if collisionFree(r,storeModel[n],obstacles)==0:
                         freePath = False
+                        print(f'Sample number {i} trajectory has a collision!')
+                        #plotPath(ax, q, parent_node.q, collision=True)
                         break
                 
                 if freePath == True:
                     Node_inst = Node(q)
                     Node_inst.parent = parent_node
-                    Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent,q)
+                    Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent.q,q)
                     NodeList.append(Node_inst)
-                    plotPath(ax, Node_inst.q,Node_inst.parent.q, collision=False)
+                    print(f'Sample number {i} config has been added to the tree!')
+                    #plotConfig(ax, q, collision=False)
+                    #plotPath(ax, q,Node_inst.parent.q, collision=False)
                     break
                 else:
                     nearest_nodes.remove(parent_index) # remove the best candidate from the nearest_nodes
@@ -559,11 +570,11 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
             
             # Check if any of the nearby nodes need to be updated due to the new node:
             # Reuse nearest_nodes since the only ones removed had collision to the new node
-            for i in enumerate(nearest_nodes):
-                dist = findDistance(NodeList[-1],NodeList[i]) # distance between new node and nearest_nodes
-                if  (dist + NodeList[-1].cost) < NodeList[i].cost:
+            for nearest_node in nearest_nodes:
+                dist = findDistance(NodeList[-1].q,NodeList[nearest_node].q) # distance between new node and each nearest_node
+                if  (dist + NodeList[-1].cost) < NodeList[nearest_node].cost:
                     # Simulate movement to the candidate node and check for collisions
-                    storeModel,r = steeringFunction(NodeList[-1].q,NodeList[i].q)
+                    storeModel,r = steeringFunction(NodeList[-1].q,NodeList[nearest_node].q)
                     freePath = True
                     for n in range(len(storeModel)):
                         if collisionFree(r,storeModel[n],obstacles)==0:
@@ -571,21 +582,23 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                             break
                         
                     if freePath == True:
+                        print("REWIRING NODE")
                         # If the cost through the new node to some nearest node is lower than that node's
                         # original cost - update it
-                        NodeList[i].parent = NodeList[-1]
-                        NodeList[i].cost = dist + NodeList[-1].cost
+                        NodeList[nearest_node].parent = NodeList[-1]
+                        NodeList[nearest_node].cost = dist + NodeList[-1].cost
                         # Recursively change the cost of each leaf of the reconnected node
-                        changeLeavesCost(NodeList[i],NodeList)
+                        changeLeavesCost(NodeList[nearest_node],NodeList)
         
         # Draw the new tree
         plt.cla()
         draw_room(ax, obstacles)
         ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
         ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
-        for i in range(len(NodeList)):
-            if(i != 0):
-                plotPath(ax, NodeList[i].q, NodeList[i].parent.q)
+        for i in range(1,len(NodeList)):
+            plotConfig(ax, NodeList[i].q, collision=False,show=False)
+            plotPath(ax, NodeList[i].q, NodeList[i].parent.q,show=False)
+            plt.show()
         
         # CHECK THE GOAL CONDITION:
         
@@ -600,13 +613,18 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 break
             freePath = True
             
+        # NEED TO POTENTIALLY REWIRE THE NODE IF COST IS LOWER?    
         if freePath == True:
             print(f'Sample number {i} has a path to goal!')
-            #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
-            Node_inst = Node(goal)
-            Node_inst.parent = NodeList[-1]
-            NodeList.append(Node_inst)
-            break
+# =============================================================================
+#             dist = findDistance(NodeList[-1].q, goal)
+#             #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
+#             Node_inst = Node(goal)
+#             Node_inst.parent = NodeList[-1]
+#             Node_inst.cost = dist + Node_inst.parent.cost
+#             NodeList.append(Node_inst)
+# =============================================================================
+            #break
         
     # Get path from tree
     currentNode = NodeList[-1]
