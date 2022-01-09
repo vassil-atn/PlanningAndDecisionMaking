@@ -98,12 +98,11 @@ def visualizeMovement(r):
     plt.grid()
     plt.pause(0.001)
 
-
-def steeringFunction(q_init,q_des,plot=False):
+def steeringFunction(q_init,q_des,plot=False,obstacles=None):
     storeModel = []
     r = Robot(mp=np.array([q_init[0],q_init[1]]),phi=q_init[2],q=np.array([q_init[3],q_init[4]]))
 
-    T = 10
+    T = 100
     dt = 0.01
     prev_error = 0
     error_i = 0
@@ -111,100 +110,116 @@ def steeringFunction(q_init,q_des,plot=False):
     # Define the direction to move the mobile robot to the desired position
     vector = np.array([q_des[0]-q_init[0],q_des[1]-q_init[1]])/np.linalg.norm([q_des[0]-q_init[0],q_des[1]-q_init[1]])
     
-    # PID CONTROLLER:
-    Kp = 10
-    Ki = 0.5
-    Kd = 0.1
-
-    firstRun = np.array([True,True,True])
-
-
-    mode = 0
-    # Steering function
-    for i in range(0,int(T/dt)):
-
-        vector = np.array([q_des[0]-r.mp[0],q_des[1]-r.mp[1]])/np.linalg.norm([q_des[0]-r.mp[0],q_des[1]-r.mp[1]])    
-        X_des = np.array([q_des[0],q_des[1],np.arctan2(vector[1],vector[0]),q_des[3],q_des[4]])
-        X = np.array([r.mp[0],r.mp[1],r.phi,r.q[0],r.q[1]])
-        
-        if np.all(abs(X-q_des) < 0.1):
-            break
-        
-        # First make sure the heading to the configuration is correct
-        if abs(X_des[2] - X[2]) > 0.1 and mode != 3:
-            if firstRun[0] == True:
-                error_i = 0
-                prev_error = 0
-            firstRun[0] = False
-            firstRun[1:3] = True
-            error = np.zeros([5])
-            error[2] = X_des[2] - X[2]
-            mode = 1
-
-
-            #
-        # If the heading is correct check the xy position of the base and the joint angles:
-        elif np.any(abs(X_des[0:2] - X[0:2]) > 0.1) or np.any(abs(X_des[3:5] - X[3:5]) > 0.1):
-            if firstRun[1] == True:
-                error_i = 0
-                prev_error = 0
-            firstRun[1] = False
-            firstRun[0] = True
-            firstRun[2] = True
-            error = np.zeros([5])
-            error = X_des - X
-            error[2] = 0
-            mode = 2
-        # Finally ensure that the robot rotates to the desired phi
-        elif abs(q_des[2]- X[2])>0.1:
-            X_des = np.array([q_des[0],q_des[1],q_des[2],q_des[3],q_des[4]])
-            if firstRun[2] == True:
-                error_i = 0
-                prev_error = 0
-            firstRun[2] = False
-            firstRun[0:2] = True
-            error = np.zeros([5])
-            error[2] = X_des[2] - X[2]
-            mode = 3
-        
-        
-        error_d = (prev_error - error)
-        error_i = error_i + error
+    # Check if the mobile base will collide with any obstacle
+    collision_free = True
+    if obstacles != None:
+        boxpoly = collisionBoxPath(vector,r,q_init,q_des)
+        collision_free = True
+        for obst in obstacles:
+            if checkPolysIntersecting(boxpoly,obst):
+                collision_free = False
+                break
+    
+    if collision_free: # if mobile base won't collide (the arms might still collide)
+        # PID CONTROLLER:
+        Kp = 10
+        Ki = 0.5
+        Kd = 0.1
+    
+        firstRun = np.array([True,True,True])
+    
+        mode = 0
+        # Steering function
+        for i in range(0,int(T/dt)):
+    
+            vector = np.array([q_des[0]-r.mp[0],q_des[1]-r.mp[1]])/np.linalg.norm([q_des[0]-r.mp[0],q_des[1]-r.mp[1]])    
+            X_des = np.array([q_des[0],q_des[1],np.arctan2(vector[1],vector[0]),q_des[3],q_des[4]])
+            X = np.array([r.mp[0],r.mp[1],r.phi,r.q[0],r.q[1]])
             
-
-        X_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
-
-
-        mp_dot_des = X_dot[0:2]
-
-        phi_dot_des = X_dot[2]
-        dq_des = X_dot[3:5]
-        
-        # If the robot needs to move to target the u_des is different than when it needs to rotate:
-        if mode == 1 or mode == 3:
-            u_des = np.array([-phi_dot_des*r.h,phi_dot_des*r.h])
-        else:
-            u_des = np.array([np.linalg.norm(mp_dot_des),np.linalg.norm(mp_dot_des)])
-        
-        
-        u_des = np.clip(u_des,-r.u_limits,r.u_limits)
-        dq_des = np.clip(dq_des,-r.dq_limits,r.dq_limits)
-        # Simulate the movement:
-        phi_dot = (u_des[1]-u_des[0])/(2*r.h)
-        mp_dot = ((np.array([[np.cos(r.phi)/2,np.cos(r.phi)/2],[np.sin(r.phi)/2,np.sin(r.phi)/2]])).dot(u_des)).T
-        #mp_dot = np.reshape(mp_dot,2)
-        dq = dq_des.copy()
-        # Integrate numerically
-        mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
-        
-        r.Update(mp,phi,p,theta,q,dq,np.array([0.0,0.0]),p_joint_1) 
-
-        # Save error for the derivative controller
-        prev_error = error     
-        storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
-        
-        # Save error for the derivative controller
-        prev_error = error
+            if obstacles != None:
+                if collisionFree(r,X,obstacles)==0:
+                    # There's a collision somewhere along the trajectory
+                    storeModel = []
+                    break
+            
+            if np.all(abs(X-q_des) < 0.1):
+                break
+            
+            # First make sure the heading to the configuration is correct
+            if abs(X_des[2] - X[2]) > 0.1 and mode != 3:
+                if firstRun[0] == True:
+                    error_i = 0
+                    prev_error = 0
+                firstRun[0] = False
+                firstRun[1:3] = True
+                error = np.zeros([5])
+                error[2] = X_des[2] - X[2]
+                mode = 1
+    
+    
+                #
+            # If the heading is correct check the xy position of the base and the joint angles:
+            elif np.any(abs(X_des[0:2] - X[0:2]) > 0.1) or np.any(abs(X_des[3:5] - X[3:5]) > 0.1):
+                if firstRun[1] == True:
+                    error_i = 0
+                    prev_error = 0
+                firstRun[1] = False
+                firstRun[0] = True
+                firstRun[2] = True
+                error = np.zeros([5])
+                error = X_des - X
+                error[2] = 0
+                mode = 2
+            # Finally ensure that the robot rotates to the desired phi
+            elif abs(q_des[2]- X[2])>0.1:
+                X_des = np.array([q_des[0],q_des[1],q_des[2],q_des[3],q_des[4]])
+                if firstRun[2] == True:
+                    error_i = 0
+                    prev_error = 0
+                firstRun[2] = False
+                firstRun[0:2] = True
+                error = np.zeros([5])
+                error[2] = X_des[2] - X[2]
+                mode = 3
+            
+            
+            error_d = (prev_error - error)
+            error_i = error_i + error
+                
+    
+            X_dot = Kp*error + Ki*error_i*dt + Kd*error_d/dt
+    
+    
+            mp_dot_des = X_dot[0:2]
+    
+            phi_dot_des = X_dot[2]
+            dq_des = X_dot[3:5]
+            
+            # If the robot needs to move to target the u_des is different than when it needs to rotate:
+            if mode == 1 or mode == 3:
+                u_des = np.array([-phi_dot_des*r.h,phi_dot_des*r.h])
+            else:
+                u_des = np.array([np.linalg.norm(mp_dot_des),np.linalg.norm(mp_dot_des)])
+            
+            
+            u_des = np.clip(u_des,-r.u_limits,r.u_limits)
+            dq_des = np.clip(dq_des,-r.dq_limits,r.dq_limits)
+            # Simulate the movement:
+            phi_dot = (u_des[1]-u_des[0])/(2*r.h)
+            mp_dot = ((np.array([[np.cos(r.phi)/2,np.cos(r.phi)/2],[np.sin(r.phi)/2,np.sin(r.phi)/2]])).dot(u_des)).T
+            #mp_dot = np.reshape(mp_dot,2)
+            dq = dq_des.copy()
+            # Integrate numerically
+            mp,phi,q,p,theta,p_joint_1 = integrateNumerically(r,mp_dot,phi_dot,dq,dt)
+            
+            r.Update(mp,phi,p,theta,q,dq,np.array([0.0,0.0]),p_joint_1) 
+    
+            # Save error for the derivative controller
+            prev_error = error     
+            storeModel.append(np.array([mp[0],mp[1],phi,q[0],q[1]]))
+            
+            # Save error for the derivative controller
+            prev_error = error
         
 # =============================================================================
 #         if plot==True:
@@ -235,6 +250,20 @@ def collisionFree(r,q,obstacles=None):
 
     return collision_free
 
+
+# This function finds the collision polygon for the mobile base path
+def collisionBoxPath(vector,r,q_init,q_des):
+    #compute orthogonal vector to vector
+    vector_orth = np.array([vector[1],-vector[0]])
+    #compute distance between q_init and q_des
+    distance = np.linalg.norm([q_des[0]-q_init[0],q_des[1]-q_init[1]])
+    c1 = r.mp+r.R*vector_orth
+    c2 = r.mp-r.R*vector_orth
+    c3 = c2 + distance*vector
+    c4 = c1 + distance*vector
+    box_poly = np.vstack((c1,c2,c3,c4))
+    return box_poly
+    
 
 # This function finds the collision polygons for the robot links only
 def collisionBox(r,q): 
@@ -493,7 +522,7 @@ def changeLeavesCost(rewired_node,NodeList):
 def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     
     # Init seed for repeatability
-    np.random.seed(2)
+    np.random.seed(1)
     
     NodeList = []
     goalNode_index = None
@@ -549,14 +578,11 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 # Choose the best candidate for the parent node:
                 parent_node,parent_index = chooseParent(NodeList,nearest_nodes,q)
                 # Simulate movement to the candidate node and check for collisions
-                storeModel,r = steeringFunction(parent_node.q,q)
+                storeModel,r = steeringFunction(parent_node.q,q,plot=False,obstacles=obstacles)
                 freePath = True
-                for n in range(len(storeModel)):
-                    if collisionFree(r,storeModel[n],obstacles)==0:
-                        freePath = False
-                        print(f'Sample number {i} trajectory has a collision!')
-                        #plotPath(ax, q, parent_node.q, collision=True)
-                        break
+                if not(storeModel):
+                    freePath = False
+                    print(f'Sample number {i} trajectory has a collision!')
                 
                 if freePath == True:
                     Node_inst = Node(q)
@@ -577,12 +603,10 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 dist = findDistance(NodeList[-1].q,NodeList[nearest_node].q) # distance between new node and each nearest_node
                 if  (dist + NodeList[-1].cost) < NodeList[nearest_node].cost:
                     # Simulate movement to the candidate node and check for collisions
-                    storeModel,r = steeringFunction(NodeList[-1].q,NodeList[nearest_node].q)
+                    storeModel,r = steeringFunction(NodeList[-1].q,NodeList[nearest_node].q,plot=False,obstacles=obstacles)
                     freePath = True
-                    for n in range(len(storeModel)):
-                        if collisionFree(r,storeModel[n],obstacles)==0:
-                            freePath = False
-                            break
+                    if not(storeModel):
+                        freePath = False
                         
                     if freePath == True:
                         print("REWIRING NODE")
@@ -598,13 +622,11 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
         # if the goal is close to the last added node        
         #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
         # Define path from last added node to goal:
-        storeModel,r = steeringFunction(NodeList[-1].q,goal)
+        storeModel,r = steeringFunction(NodeList[-1].q,goal,plot=False,obstacles=obstacles)
         # Check if path is free:
-        for n in range(len(storeModel)):
-            if collisionFree(r,storeModel[n],obstacles)==0:
-                freePath = False
-                break
-            freePath = True
+        freePath = True
+        if not(storeModel):
+            freePath = False
             
         if freePath == True:
             print(f'Sample number {i} has a path to goal!')
