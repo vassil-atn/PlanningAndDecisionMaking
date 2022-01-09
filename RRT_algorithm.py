@@ -3,6 +3,7 @@ from robotModel import Robot
 from collision_detection import checkPolysIntersecting, checkPolyCircleIntersecting
 import matplotlib.pyplot as plt
 
+savefigs = False
 
 class Node:
     def __init__(self,q,cost=0):
@@ -529,6 +530,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     r = Robot()
     
     # Draw room
+    n_treefig = 0
     fig, ax = plt.subplots()
     ax.set_aspect('equal','box')
     ax.set_xlim([0, room_width])
@@ -591,7 +593,10 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                     NodeList.append(Node_inst)
                     print(f'Sample number {i} config has been added to the tree!')
                     #plotConfig(ax, q, collision=False)
-                    #plotPath(ax, q,Node_inst.parent.q, collision=False)
+                    plotPath(ax, q,Node_inst.parent.q, collision=False)
+                    if savefigs:
+                        plt.savefig("figs/tree/"+str(n_treefig))
+                        n_treefig += 1
                     break
                 else:
                     nearest_nodes.remove(parent_index) # remove the best candidate from the nearest_nodes
@@ -616,6 +621,19 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                         NodeList[nearest_node].cost = dist + NodeList[-1].cost
                         # Recursively change the cost of each leaf of the reconnected node
                         changeLeavesCost(NodeList[nearest_node],NodeList)
+                        
+                        # Draw the new tree
+                        plt.cla()
+                        draw_room(ax, obstacles)
+                        ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
+                        ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+                        for j in range(1,len(NodeList)):
+                            plotPath(ax, NodeList[j].q, NodeList[j].parent.q,show=False)
+                        plt.show()
+                        if savefigs:
+                            plt.savefig("figs/tree/"+str(n_treefig))
+                            n_treefig += 1
+                        
         
         # CHECK THE GOAL CONDITION:
         
@@ -644,16 +662,6 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 if (dist + NodeList[-1].cost) < (NodeList[goalNode_index].cost):
                     NodeList[goalNode_index].parent = NodeList[-1]
                     NodeList[goalNode_index].cost = dist + NodeList[-1].cost
-        
-        # Draw the new tree
-        plt.cla()
-        draw_room(ax, obstacles)
-        ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
-        ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
-        for j in range(1,len(NodeList)):
-            plotConfig(ax, NodeList[j].q, collision=False,show=False)
-            plotPath(ax, NodeList[j].q, NodeList[j].parent.q,show=False)
-            plt.show()
     
     if goalNode_index == None:
         print('No path to goal found')
@@ -675,6 +683,9 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
         plotConfig(ax, path[-1].q,False,r)
         plt.show()
         plt.pause(0.001)
+        if savefigs:
+            plt.savefig("figs/tree/"+str(n_treefig))
+            n_treefig += 1
     
         # New plot for final trajectory
         fig2, ax2 = plt.subplots()
@@ -683,11 +694,17 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
         ax2.set_ylim([0, room_height])
     
         # Animate the final trajectory
+        n_animfig = 0
         for n in range(len(path)-1):
             traj,r = steeringFunction(path[n].q,path[n+1].q)
             for traj_q in traj:
                 plt.cla()
                 draw_room(ax2, obstacles)
                 plotConfig(ax2, traj_q, collision=False, r=r)
+                if savefigs:
+                    n_animfig += 1
+                    if(n_animfig%10 == 0):
+                        plt.savefig("figs/anim/"+str(n_animfig))
+                    
 
     return NodeList
