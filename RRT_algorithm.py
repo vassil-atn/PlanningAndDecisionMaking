@@ -155,7 +155,7 @@ def steeringFunction(q_init,q_des,plot=False,obstacles=None,phi_desired=True):
                 
             
             # First make sure the heading to the configuration is correct
-            if abs(X_des[2] - X[2]) > 0.1 and mode != 3:
+            if abs(X_des[2] - X[2]) > 0.05 and mode != 3:
                 if firstRun[0] == True:
                     error_i = 0
                     prev_error = 0
