@@ -100,7 +100,7 @@ def visualizeMovement(r):
     plt.grid()
     plt.pause(0.001)
 
-def steeringFunction(q_init,q_des,plot=False,obstacles=None):
+def steeringFunction(q_init,q_des,plot=False,obstacles=None,phi_desired=True):
     storeModel = []
     r = Robot(mp=np.array([q_init[0],q_init[1]]),phi=q_init[2],q=np.array([q_init[3],q_init[4]]))
 
@@ -144,8 +144,15 @@ def steeringFunction(q_init,q_des,plot=False,obstacles=None):
                     storeModel = []
                     break
             
-            if np.all(abs(X-q_des) < 0.1):
+            if np.all(abs(X-q_des) < 0.1) and phi_desired==True: # we care about the phi of q_des (only in the case q_des is the goal config)
                 break
+            
+            if phi_desired==False: # we don't care about the phi of q_des (in case of intermediate nodes)
+                q_des_no_phi = np.array([q_des[0],q_des[1],q_des[3],q_des[4]])
+                X_no_phi = np.array([r.mp[0],r.mp[1],r.q[0],r.q[1]])
+                if np.all(abs(X_des[0:2] - X[0:2]) <= 0.1) and np.all(abs(X_des[3:5] - X[3:5]) <= 0.1):
+                    break
+                
             
             # First make sure the heading to the configuration is correct
             if abs(X_des[2] - X[2]) > 0.1 and mode != 3:
@@ -172,8 +179,8 @@ def steeringFunction(q_init,q_des,plot=False,obstacles=None):
                 error = X_des - X
                 error[2] = 0
                 mode = 2
-            # Finally ensure that the robot rotates to the desired phi
-            elif abs(q_des[2]- X[2])>0.1:
+            # Finally ensure that the robot rotates to the desired phi (only if q_des is the goal config)
+            elif abs(q_des[2]- X[2])>0.1 and phi_desired==True:
                 X_des = np.array([q_des[0],q_des[1],q_des[2],q_des[3],q_des[4]])
                 if firstRun[2] == True:
                     error_i = 0
@@ -496,15 +503,20 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
         ax2.set_xlim([0, room_width])
         ax2.set_ylim([0, room_height])
     
-# =============================================================================
-#         # Animate the final trajectory
-#         for n in range(len(path)-1):
-#             traj,r = steeringFunction(path[n].q,path[n+1].q)
-#             for traj_q in traj:
-#                 plt.cla()
-#                 draw_room(ax2, obstacles)
-#                 plotConfig(ax2, traj_q, collision=False, r=r)
-# =============================================================================
+        # Animate the final trajectory
+        for n in range(len(path)-1):
+            if n==0:
+                traj,r = steeringFunction(path[n].q,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+                last_config = traj[-1]
+            elif n>0 and n<len(path)-1-1:
+                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+                last_config = traj[-1]
+            else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
+                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
+            for traj_q in traj:
+                plt.cla()
+                draw_room(ax2, obstacles)
+                plotConfig(ax2, traj_q, collision=False, r=r)
 
     return NodeList
 
@@ -755,26 +767,31 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
             plt.savefig("figs/tree/"+str(n_treefig))
             n_treefig += 1
     
-# =============================================================================
-#         # New plot for final trajectory
-#         fig2, ax2 = plt.subplots(figsize=(9,6.75))
-#         ax2.set_aspect('equal','box')
-#         ax2.set_xlim([0, room_width])
-#         ax2.set_ylim([0, room_height])
-#     
-#         # Animate the final trajectory
-#         n_animfig = 0
-#         for n in range(len(path)-1):
-#             traj,r = steeringFunction(path[n].q,path[n+1].q)
-#             for traj_q in traj:
-#                 plt.cla()
-#                 draw_room(ax2, obstacles)
-#                 plotConfig(ax2, traj_q, collision=False, r=r)
-#                 if savefigs:
-#                     n_animfig += 1
-#                     if(n_animfig%10 == 0):
-#                         plt.savefig("figs/anim/"+str(n_animfig))
-# =============================================================================
+        # New plot for final trajectory
+        fig2, ax2 = plt.subplots(figsize=(9,6.75))
+        ax2.set_aspect('equal','box')
+        ax2.set_xlim([0, room_width])
+        ax2.set_ylim([0, room_height])
+    
+        # Animate the final trajectory
+        n_animfig = 0
+        for n in range(len(path)-1):
+            if n==0:
+                traj,r = steeringFunction(path[n].q,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+                last_config = traj[-1]
+            elif n>0 and n<len(path)-1-1:
+                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+                last_config = traj[-1]
+            else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
+                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
+            for traj_q in traj:
+                plt.cla()
+                draw_room(ax2, obstacles)
+                plotConfig(ax2, traj_q, collision=False, r=r)
+                if savefigs:
+                    n_animfig += 1
+                    if(n_animfig%10 == 0):
+                        plt.savefig("figs/anim/"+str(n_animfig))
                     
 
     return NodeList
