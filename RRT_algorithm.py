@@ -360,7 +360,8 @@ def clearVisNode(Node_inst):
     except:
         for el in Node_inst.vis:
             el.remove()
-
+            
+    Node_inst.vis = []
 
 def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     
@@ -377,7 +378,6 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     ax.set_xlim([0, room_width])
     ax.set_ylim([0, room_height])
     draw_room(ax, obstacles)
-    visPath = []
     ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
     ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
     
@@ -637,14 +637,13 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
             freePath = True
             if not(storeModel): #storeModel empty due to some collision
                 freePath = False
+                clearVisNode(Node_inst)
                 print(f'Sample number {i} trajectory has a collision!')
                    
                             
             if freePath == True:
-                Node_inst = Node(q)
                 Node_inst.parent = NodeList[closest_idx]
                 #NodeList.append(Node_inst)
-                plotConfig(ax, Node_inst.q, Node_inst)
                 print(f'Sample number {i} added to tree!')
                 plotPath(ax, q, NodeList[closest_idx].q, Node_inst, collision=False)
                 #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
@@ -666,10 +665,9 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                         Node_inst.parent = parent_node
                         Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent.q,q)
                         clearVisNode(Node_inst)
-                        plotConfig(ax, Node_inst.q, Node_inst)
                   #      NodeList.append(Node_inst)
                         print('Path has been rewired!')
-                        #plotConfig(ax, q, collision=False)
+                        plotConfig(ax, q, Node_inst,collision=False)
                         plotPath(ax, q,Node_inst.parent.q, Node_inst,collision=False)
                         if savefigs:
                             plt.savefig("figs/tree/"+str(n_treefig))
@@ -697,7 +695,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                             NodeList[nearest_node].parent = NodeList[-1]
                             NodeList[nearest_node].cost = dist + NodeList[-1].cost
                             # Clear the plot for the previous path and add the new path
-                            #clearVisNode(NodeList[nearest_node])
+                            clearVisNode(NodeList[nearest_node])
+                            plotConfig(ax, NodeList[nearest_node].q, NodeList[nearest_node],collision=False)
                             plotPath(ax, NodeList[nearest_node].q,NodeList[nearest_node].parent.q, NodeList[nearest_node],collision=False,show=False)
                             # Recursively change the cost of each leaf of the reconnected node
                             changeLeavesCost(NodeList[nearest_node],NodeList)
@@ -717,6 +716,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 freePath = True
                 if not(storeModel):
                     freePath = False
+                            
         else:
             freePath = False
             Node_inst = Node(q)
