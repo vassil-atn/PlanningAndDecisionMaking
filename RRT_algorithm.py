@@ -2,7 +2,7 @@ import numpy as np
 from robotModel import Robot
 from collision_detection import checkPolysIntersecting, checkPolyCircleIntersecting
 import matplotlib.pyplot as plt
-
+from matplotlib.patches import Arc
 savefigs = False
 
 class Node:
@@ -314,8 +314,13 @@ def plotConfig(ax, q, Node, collision = False, r = None, show = True):
         else:
              Node.vis.append(ax.add_patch(plt.Circle((q[0], q[1]), r.R, color='b',fill=False)))
         # Arms
-        _,_,_,j1,j2 = r.ForwardKinematicsConfig(q)
+        mp,pc1,pc2,j1,j2 = r.ForwardKinematicsConfig(q)
         Node.vis.append(ax.plot([q[0],j1[0],j2[0]],[q[1],j1[1],j2[1]],'k')[0])
+        theta = np.sum(q[2:5])
+        angle = np.rad2deg(theta)
+        p = j2
+        gripper = Arc((p[0]+0.25*np.cos(theta), p[1]+0.25*np.sin(theta)),0.5,0.5,angle+90,0,180, color='r')
+        Node.vis.append(ax.add_patch(gripper))
     if show:    
         plt.show()
     plt.pause(0.000001)
@@ -524,7 +529,7 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
             for traj_q in traj:
                 plt.cla()
                 draw_room(ax2, obstacles)
-                plotConfig(ax2, traj_q, collision=False, r=r)
+                plotConfig(ax2, traj_q,Node(traj_q), collision=False, r=r)
 
     return NodeList
 
