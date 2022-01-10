@@ -25,7 +25,7 @@ def HaarMeasure(angle1,angle2):
 
 def findDistance(q1,q2):
     # Use Haar Measure for the angles:
-    distance = np.linalg.norm(q1[0:2] - q2[0:2]) + HaarMeasure(q1[2],q2[2]) + HaarMeasure(q1[3],q2[3])
+    distance = np.linalg.norm(q1[0:2] - q2[0:2]) + HaarMeasure(q1[2],q2[2]) + HaarMeasure(q1[3],q2[3]) + HaarMeasure(q1[4],q2[4]) 
     
     return distance
 
@@ -752,8 +752,6 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 if (dist + NodeList[-1].cost) < (NodeList[goalNode_index].cost):
                     NodeList[goalNode_index].parent = NodeList[-1]
                     NodeList[goalNode_index].cost = dist + NodeList[-1].cost
-                    clearVisNode(NodeList[goalNode_index])
-                    plotConfig(ax, Node_inst.q, NodeList[goalNode_index],collision=False,r=r)
                     plotPath(ax, NodeList[-1].q, NodeList[goalNode_index].q, NodeList[goalNode_index], collision = False)
 
     if goalNode_index == None:
@@ -771,7 +769,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
         
         # Draw final path and intermediate configs
         for n in range(len(path)-1):
-            ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
+            ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green',lw=3)
             plotConfig(ax, path[n].q,path[n],False,r)
         plotConfig(ax, path[-1].q,path[-1],False,r)
         plt.show()
@@ -803,7 +801,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 plotConfig(ax2, traj_q, Node(traj_q),collision=False, r=r)
                 if savefigs:
                     n_animfig += 1
-                    if(n_animfig%10 == 0):
+                    if(n_animfig%5 == 0):
                         plt.savefig("figs/anim/"+str(n_animfig))
                     
 
