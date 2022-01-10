@@ -385,6 +385,7 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     draw_room(ax, obstacles)
     ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
     ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+    plt.show()
     
     # First add the starting node:
     Node_inst = Node(start)
@@ -431,6 +432,7 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
             freePath = True
             if not(storeModel): #storeModel empty due to some collision
                 freePath = False
+                clearVisNode(Node_inst)
                 print(f'Sample number {i} trajectory has a collision!')
                 
             # for n in range(len(storeModel)):
@@ -481,6 +483,9 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 Node_inst = Node(goal)
                 Node_inst.parent = NodeList[-1]
                 Node_inst.cost = dist + Node_inst.parent.cost
+                plotConfig(ax, Node_inst.q, Node_inst,collision=False,r=r)
+                plotPath(ax, NodeList[-1].q, Node_inst.q, Node_inst, collision = False)
+                plt.show()
                 NodeList.append(Node_inst)
                 goalNode_index = len(NodeList)-1
             #break
@@ -488,12 +493,18 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 if (dist + NodeList[-1].cost) < (NodeList[goalNode_index].cost):
                     NodeList[goalNode_index].parent = NodeList[-1]
                     NodeList[goalNode_index].cost = dist + NodeList[-1].cost
+                    print(f'UPDATED GOAL COST: {NodeList[goalNode_index].cost}')
+                    clearVisNode(NodeList[goalNode_index])
+                    plotConfig(ax, Node_inst.q, NodeList[goalNode_index],collision=False,r=r)
+                    plotPath(ax, NodeList[-1].q, NodeList[goalNode_index].q, NodeList[goalNode_index], collision = False)
     
     if goalNode_index == None:
         print('No path to goal found')
     else:
         print('Path to goal found')
         # Get path from tree
+        print('Goal node index is: '+str(goalNode_index))
+        print(NodeList[goalNode_index].cost)
         currentNode = NodeList[goalNode_index]
         path = []
         path.append(currentNode)
@@ -760,6 +771,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 if (dist + NodeList[-1].cost) < (NodeList[goalNode_index].cost):
                     NodeList[goalNode_index].parent = NodeList[-1]
                     NodeList[goalNode_index].cost = dist + NodeList[-1].cost
+                    print(f'UPDATED GOAL COST: {NodeList[goalNode_index].cost}')
                     clearVisNode(NodeList[goalNode_index])
                     plotConfig(ax, Node_inst.q, NodeList[goalNode_index],collision=False,r=r)
                     plotPath(ax, NodeList[-1].q, NodeList[goalNode_index].q, NodeList[goalNode_index], collision = False)
@@ -769,6 +781,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     else:
         print('Path to goal found')
         # Get path from tree
+        print('Goal node index is: '+str(goalNode_index))
+        print(NodeList[goalNode_index].cost)
         currentNode = NodeList[goalNode_index]
         path = []
         path.append(currentNode)
