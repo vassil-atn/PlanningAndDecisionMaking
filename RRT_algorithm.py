@@ -354,7 +354,7 @@ def draw_room(win, obstacles):
     return
 
 def clearVisNode(Node_inst):
-    plt.pause(0.2)
+    plt.pause(0.1)
     try:
         Node_inst.vis.remove()
     except:
@@ -662,21 +662,23 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                         freePath = False
                         print(f'Sample number {i} trajectory has a collision!')
                     
-                    if freePath == True and closest_idx != parent_index:
-                        Node_inst.parent = parent_node
-                        Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent.q,q)
-                        clearVisNode(Node_inst)
-                  #      NodeList.append(Node_inst)
-                        print('Path has been rewired!')
-                        plotConfig(ax, q, Node_inst,collision=False)
-                        plotPath(ax, q,Node_inst.parent.q, Node_inst,collision=False)
-                        if savefigs:
-                            plt.savefig("figs/tree/"+str(n_treefig))
-                            n_treefig += 1
+                    if freePath == True:
+                        if closest_idx != parent_index:
+                            Node_inst.parent = parent_node
+                            Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent.q,q)
+                            clearVisNode(Node_inst)
+                      #      NodeList.append(Node_inst)
+                      
+                            print('Path has been rewired!')
+                            plotConfig(ax, q, Node_inst,collision=False)
+                            plotPath(ax, q,Node_inst.parent.q, Node_inst,collision=False)
                         break
                     else:
                         nearest_nodes.remove(parent_index) # remove the best candidate from the nearest_nodes
                         # and check the next one
+                if savefigs:
+                    plt.savefig("figs/tree/"+str(n_treefig))
+                    n_treefig += 1        
                 NodeList.append(Node_inst)        
                 # Check if any of the nearby nodes need to be updated due to the new node:
                 # Reuse nearest_nodes since the only ones removed had collision to the new node
@@ -746,7 +748,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                     NodeList[goalNode_index].parent = NodeList[-1]
                     NodeList[goalNode_index].cost = dist + NodeList[-1].cost
                     clearVisNode(NodeList[goalNode_index])
-                    plotConfig(ax, Node_inst.q, NodeList[goalNode_index],collision=False)
+                    plotConfig(ax, Node_inst.q, NodeList[goalNode_index],collision=False,r=r)
                     plotPath(ax, NodeList[-1].q, NodeList[goalNode_index].q, NodeList[goalNode_index], collision = False)
 
     if goalNode_index == None:
