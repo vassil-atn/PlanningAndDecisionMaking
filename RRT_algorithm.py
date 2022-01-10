@@ -489,8 +489,8 @@ def pathCollisionFree(q1, q2, obstacles):
 # This function finds the nearest nodes around the new node in a given radius
 def findNearestNodes(q,NodeList,newAddedNode=0):
     nearest_nodes = []
-
-    radius = 20# Define the radius in which to check for more optimal paths
+    # Define the radius in which to check for more optimal paths 
+    radius = 20 # TODO - change to minimum needed for optimal?
     for idx,node in enumerate(NodeList):
         if findDistance(node.q,q) < radius:
             nearest_nodes.append(idx)
@@ -512,7 +512,6 @@ def chooseParent(NodeList,nearest_nodes,q):
 
 # This function updates the costs of leaves once their parent node's cost has been updated
 def changeLeavesCost(rewired_node,NodeList): 
-    print("CHECK IF CHILDREN NEED TO CHANGE COST")
     for node in NodeList:
         if node.parent == rewired_node:
             print("CHANGING LEAF COST")
@@ -531,15 +530,19 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     
     # Draw room
     n_treefig = 0
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(9,6.75))
     ax.set_aspect('equal','box')
-    ax.set_xlim([0, room_width])
-    ax.set_ylim([0, room_height])
+    #ax.set_xlim([0, room_width])
+    #ax.set_ylim([0, room_height])
     draw_room(ax, obstacles)
     ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
     ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+    ax.add_patch(plt.Circle(goal_end[0:2],0.2,color='green'))
+    ax.plot([goal_end[0],goal_end[0]+np.cos(goal_end[2])],[goal_end[1],goal_end[1]+np.sin(goal_end[2])],'-g')
+    plt.show()
     
-    # Define goal configuration based on end effector target TODO - check for collision
+    # Define goal configuration based on end effector target 
+    # TODO - check for collision (remove requirement that obstacles aren't created 2m around goal)
     # Robot is redundant so 2dof can be selected randomly
     j1_g = np.random.uniform(0,2*np.pi)
     j2_g = np.random.uniform(0,2*np.pi)
@@ -550,7 +553,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     py_g = r.l[0]*np.sin(j1_g)+r.l[1]*np.sin(j1_g+j2_g)
     mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
     goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
-    plotConfig(ax,goal,False,r)
+    
    
     # First add the starting node:
     Node_inst = Node(start)
@@ -627,6 +630,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                         draw_room(ax, obstacles)
                         ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
                         ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+                        ax.add_patch(plt.Circle(goal_end[0:2],0.2,color='green'))
+                        ax.plot([goal_end[0],goal_end[0]+np.cos(goal_end[2])],[goal_end[1],goal_end[1]+np.sin(goal_end[2])],'-g')
                         for j in range(1,len(NodeList)):
                             plotPath(ax, NodeList[j].q, NodeList[j].parent.q,show=False)
                         plt.show()
@@ -688,7 +693,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
             n_treefig += 1
     
         # New plot for final trajectory
-        fig2, ax2 = plt.subplots()
+        fig2, ax2 = plt.subplots(figsize=(9,6.75))
         ax2.set_aspect('equal','box')
         ax2.set_xlim([0, room_width])
         ax2.set_ylim([0, room_height])
