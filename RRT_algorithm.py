@@ -155,7 +155,7 @@ def steeringFunction(q_init,q_des,plot=False,obstacles=None,phi_desired=True):
                 
             
             # First make sure the heading to the configuration is correct
-            if abs(X_des[2] - X[2]) > 0.05 and mode != 3:
+            if abs(X_des[2] - X[2]) > 0.01 and mode != 3:
                 if firstRun[0] == True:
                     error_i = 0
                     prev_error = 0
@@ -441,6 +441,7 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
             if freePath == True:
                 Node_inst = Node(q)
                 Node_inst.parent = NodeList[closest_idx]
+                Node_inst.cost = NodeList[closest_idx].cost + best_distance
                 NodeList.append(Node_inst)
                 print(f'Sample number {i} added to tree!')
                 plotPath(ax, NodeList[closest_idx].q,q, Node_inst, collision=False)
@@ -469,21 +470,28 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
             
         if freePath == True:
             print(f'Sample number {i} has a path to goal!')
+            dist = findDistance(NodeList[-1].q, goal)
             #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
-            Node_inst = Node(goal)
-            Node_inst.parent = NodeList[-1]
-            NodeList.append(Node_inst)
-            goalNode_index = len(NodeList)-1
-            break
+            if goalNode_index==None:
+                Node_inst = Node(goal)
+                Node_inst.parent = NodeList[-1]
+                Node_inst.cost = dist + Node_inst.parent.cost
+                NodeList.append(Node_inst)
+                goalNode_index = len(NodeList)-1
+            #break
+            else:
+                if (dist + NodeList[-1].cost) < (NodeList[goalNode_index].cost):
+                    NodeList[goalNode_index].parent = NodeList[-1]
+                    NodeList[goalNode_index].cost = dist + NodeList[-1].cost
     
     if goalNode_index == None:
         print('No path to goal found')
     else:
         print('Path to goal found')
         # Get path from tree
-        currentNode = NodeList[-1]
+        currentNode = NodeList[goalNode_index]
         path = []
-        path.append(NodeList[-1])
+        path.append(currentNode)
         while currentNode != NodeList[0]:
             path.append(currentNode.parent)
             currentNode = currentNode.parent
