@@ -734,7 +734,9 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 Node_inst = Node(goal)
                 Node_inst.parent = NodeList[-1]
                 Node_inst.cost = dist + Node_inst.parent.cost
-                plotPath(ax, NodeList[-1].q, Node_inst.q, Node_inst, collision = False,show=True)
+                plotConfig(ax, Node_inst.q, Node_inst,collision=False,r=r)
+                plotPath(ax, NodeList[-1].q, Node_inst.q, Node_inst, collision = False)
+                plt.show()
                 NodeList.append(Node_inst)
                 goalNode_index = len(NodeList)-1
             # If goal reached before, change the parent to new node if new path cost is lower
@@ -742,6 +744,9 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 if (dist + NodeList[-1].cost) < (NodeList[goalNode_index].cost):
                     NodeList[goalNode_index].parent = NodeList[-1]
                     NodeList[goalNode_index].cost = dist + NodeList[-1].cost
+                    clearVisNode(NodeList[goalNode_index])
+                    plotConfig(ax, Node_inst.q, NodeList[goalNode_index],collision=False)
+                    plotPath(ax, NodeList[-1].q, NodeList[goalNode_index].q, NodeList[goalNode_index], collision = False)
 
     if goalNode_index == None:
         print('No path to goal found')

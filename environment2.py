@@ -19,7 +19,7 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
     obstacles.append(np.array([[width, height-wall_thk], [width, wall_thk], [width-wall_thk, wall_thk], [width-wall_thk, height-wall_thk]]))
     
     # Extra wall in middle
-    obstacles.append(np.array([[width/2, wall_thk], [width/2, height-wall_thk-6], [width/2+wall_thk, height-wall_thk-6], [width/2+wall_thk, wall_thk]]))
+    #obstacles.append(np.array([[width/2, wall_thk], [width/2, height-wall_thk-6], [width/2+wall_thk, height-wall_thk-6], [width/2+wall_thk, wall_thk]]))
     
     # Start - the starting robot configuration. Random y pos on LHS of room, with 0 joint angles
     startPos = np.array([uniform(wall_thk+2.5, wall_thk+7), uniform(wall_thk+2.5, height-wall_thk-2.5)])
@@ -75,7 +75,7 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
 # Initialise room with obstacles and start/goal
 room_width = 30
 room_height = 20
-start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=5)
+start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=1)
 
 # Run RRT
 NodeList = rrt.RRT_star(start, goal_end, room_width, room_height, 80, obstacles)
