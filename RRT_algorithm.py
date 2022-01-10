@@ -10,7 +10,8 @@ class Node:
         self.q = q
         self.parent = None
         self.cost = cost
-
+        self.vis = []
+            
 
 def HaarMeasure(angle1,angle2):
     # First bound the angles to be between 0 and 2*pi
@@ -296,35 +297,35 @@ def collisionBox(r,q):
     return l1_poly,l2_poly
 
 
-def plotConfig(ax, q, collision = False, r = None, show = True):
+def plotConfig(ax, q, Node, collision = False, r = None, show = True):
     # Mobile base position
     if collision:
-        ax.plot(q[0],q[1],'or')
+        Node.vis.append(ax.plot(q[0],q[1],'or')[0])
     else:
-        ax.plot(q[0],q[1],'ob')
+        Node.vis.append(ax.plot(q[0],q[1],'ob')[0])
         
     # Full configuration       
     if r != None:
         # Heading
-        ax.plot([q[0],q[0]+0.75*np.cos(q[2])],[q[1],q[1]+0.5*np.sin(q[2])],color='k')
+        Node.vis.append(ax.plot([q[0],q[0]+0.75*np.cos(q[2])],[q[1],q[1]+0.5*np.sin(q[2])],color='k')[0])
         # Mobile base
         if collision:
-            ax.add_patch(plt.Circle((q[0], q[1]), r.R, color='r',fill=False))
+             Node.vis.append(ax.add_patch(plt.Circle((q[0], q[1]), r.R, color='r',fill=False)))
         else:
-            ax.add_patch(plt.Circle((q[0], q[1]), r.R, color='b',fill=False))
+             Node.vis.append(ax.add_patch(plt.Circle((q[0], q[1]), r.R, color='b',fill=False)))
         # Arms
         _,_,_,j1,j2 = r.ForwardKinematicsConfig(q)
-        ax.plot([q[0],j1[0],j2[0]],[q[1],j1[1],j2[1]],'k')
+        Node.vis.append(ax.plot([q[0],j1[0],j2[0]],[q[1],j1[1],j2[1]],'k')[0])
     if show:    
         plt.show()
     plt.pause(0.000001)
 
 
-def plotPath(ax, q1, q2, collision = False,show=True):
+def plotPath(ax, q1, q2, Node2, collision = False,show=True):
     if collision:
-        ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-r')
+        Node2.vis.append(ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-r')[0])
     else:
-        ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-b')
+        Node2.vis.append(ax.plot([q1[0],q2[0]],[q1[1],q2[1]],'-b')[0])
     if show:    
         plt.show()
     plt.pause(0.001)
@@ -352,6 +353,14 @@ def draw_room(win, obstacles):
         win.add_patch(obs)
     return
 
+def clearVisNode(Node_inst):
+    plt.pause(0.2)
+    try:
+        Node_inst.vis.remove()
+    except:
+        for el in Node_inst.vis:
+            el.remove()
+
 
 def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     
@@ -368,8 +377,13 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     ax.set_xlim([0, room_width])
     ax.set_ylim([0, room_height])
     draw_room(ax, obstacles)
+    visPath = []
     ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
     ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+    
+    # First add the starting node:
+    Node_inst = Node(start)
+    NodeList.append(Node_inst)
     
     # Define goal configuration based on end effector target TODO - check for collision
     # Robot is redundant so 2dof can be selected randomly
@@ -382,11 +396,7 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     py_g = r.l[0]*np.sin(j1_g)+r.l[1]*np.sin(j1_g+j2_g)
     mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
     goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
-    plotConfig(ax,goal,False,r)
-   
-    # First add the starting node:
-    Node_inst = Node(start)
-    NodeList.append(Node_inst)
+    plotConfig(ax,goal,Node_inst, False,r)
     
     for i in range(0,N):
 
@@ -401,8 +411,9 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
         
         if collisionFree(r,q,obstacles) == True:
             print(f'Sample number {i} config is collision free!')
-            #plotConfig(ax, q, collision=False, r=r)
-            
+
+            Node_inst = Node(q)
+            plotConfig(ax, q, Node_inst,collision=False)
             # Find closest vertix in V 
             for idx, node in enumerate(NodeList):
                 distance = findDistance(node.q,q)
@@ -432,11 +443,14 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
                 Node_inst.parent = NodeList[closest_idx]
                 NodeList.append(Node_inst)
                 print(f'Sample number {i} added to tree!')
-                plotPath(ax, q, NodeList[closest_idx].q, collision=False)
+                plotPath(ax, q, NodeList[closest_idx].q, Node_inst, collision=False)
                 #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
         else:
+            Node_inst = Node(q)
             print(f'Sample number {i} config has a collision!')
-            plotConfig(ax, q, collision=True)
+            plotConfig(ax,Node_inst.q,Node_inst, collision=True)
+            clearVisNode(Node_inst)
+            
                 
         # if the goal is close to the last added node        
         #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
@@ -477,9 +491,9 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
         
         # Draw final path and intermediate configs
         for n in range(len(path)-1):
-            ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
-            plotConfig(ax, path[n].q,False,r)
-        plotConfig(ax, path[-1].q,False,r)
+            ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')[0]
+            plotConfig(ax, path[n].q,path[n],False,r)
+        plotConfig(ax, path[-1].q, path[-1],False,r)
         plt.show()
         plt.pause(0.001)
     
@@ -517,10 +531,10 @@ def pathCollisionFree(q1, q2, obstacles):
 
 
 # This function finds the nearest nodes around the new node in a given radius
-def findNearestNodes(q,NodeList,newAddedNode=0):
+def findNearestNodes(q,NodeList):
     nearest_nodes = []
     # Define the radius in which to check for more optimal paths 
-    radius = 20 # TODO - change to minimum needed for optimal?
+    radius = 10 # TODO - change to minimum needed for optimal?
     for idx,node in enumerate(NodeList):
         if findDistance(node.q,q) < radius:
             nearest_nodes.append(idx)
@@ -552,12 +566,12 @@ def changeLeavesCost(rewired_node,NodeList):
 def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     
     # Init seed for repeatability
-    np.random.seed(1)
+    np.random.seed(2)
     
     NodeList = []
     goalNode_index = None
     r = Robot()
-    
+
     # Draw room
     n_treefig = 0
     fig, ax = plt.subplots(figsize=(9,6.75))
@@ -565,6 +579,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     #ax.set_xlim([0, room_width])
     #ax.set_ylim([0, room_height])
     draw_room(ax, obstacles)
+
     ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
     ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
     ax.add_patch(plt.Circle(goal_end[0:2],0.2,color='green'))
@@ -592,6 +607,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     for i in range(0,N):
 
         print(f'Running sample number {i}')
+        best_distance = float('inf')
         # Pick a random point in C-space
         q = np.array([np.random.uniform(0,room_width),
                       np.random.uniform(0,room_height),
@@ -601,40 +617,68 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
         
         if collisionFree(r,q,obstacles) == True:
             print(f'Sample number {i} config is collision free!')
-            #plotConfig(ax, q, collision=False, r=r)
+            Node_inst = Node(q)
+            plotConfig(ax, q, Node_inst,collision=False)
             
-            nearest_nodes = findNearestNodes(q,NodeList,newAddedNode=1)
+            nearest_nodes = findNearestNodes(q,NodeList)
             if goalNode_index in nearest_nodes:
                 nearest_nodes.remove(goalNode_index)
-            # Iterate over all the nearest nodes until the best parent node with a valid path is found
-            # or the list runs out of elements. Each iteration finds the best parent node and if its path
-            # isnt collision free it gets removed.
-            for num_nodes_near in range(len(nearest_nodes)):
-                # Choose the best candidate for the parent node:
-                parent_node,parent_index = chooseParent(NodeList,nearest_nodes,q)
-                # Simulate movement to the candidate node and check for collisions
-                storeModel,r = steeringFunction(parent_node.q,q,plot=False,obstacles=obstacles)
-                freePath = True
-                if not(storeModel):
-                    freePath = False
-                    print(f'Sample number {i} trajectory has a collision!')
                 
-                if freePath == True:
-                    Node_inst = Node(q)
-                    Node_inst.parent = parent_node
-                    Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent.q,q)
-                    NodeList.append(Node_inst)
-                    print(f'Sample number {i} config has been added to the tree!')
-                    #plotConfig(ax, q, collision=False)
-                    plotPath(ax, q,Node_inst.parent.q, collision=False)
-                    if savefigs:
-                        plt.savefig("figs/tree/"+str(n_treefig))
-                        n_treefig += 1
-                    break
-                else:
-                    nearest_nodes.remove(parent_index) # remove the best candidate from the nearest_nodes
-                    # and check the next one
+                
+            # Find closest vertix in V 
+            for idx, node in enumerate(NodeList):
+                distance = findDistance(node.q,q)
+                if distance < best_distance:
+                    best_distance = distance
+                    closest_idx = idx
             
+            # Now we have q1 and q2
+            storeModel,r = steeringFunction(NodeList[closest_idx].q,q,plot=False,obstacles=obstacles)
+            freePath = True
+            if not(storeModel): #storeModel empty due to some collision
+                freePath = False
+                print(f'Sample number {i} trajectory has a collision!')
+                
+                
+            if freePath == True:
+                Node_inst = Node(q)
+                Node_inst.parent = NodeList[closest_idx]
+                NodeList.append(Node_inst)
+                print(f'Sample number {i} added to tree!')
+                plotPath(ax, q, NodeList[closest_idx].q, Node_inst, collision=False)
+                #plotTrajectory(ax, np.array(storeModel), collision=False, r=r)
+                
+# =============================================================================
+#             # Iterate over all the nearest nodes until the best parent node with a valid path is found
+#             # or the list runs out of elements. Each iteration finds the best parent node and if its path
+#             # isnt collision free it gets removed.
+#             for num_nodes_near in range(len(nearest_nodes)):
+#                 # Choose the best candidate for the parent node:
+#                 parent_node,parent_index = chooseParent(NodeList,nearest_nodes,q)
+#                 # Simulate movement to the candidate node and check for collisions
+#                 storeModel,r = steeringFunction(parent_node.q,q,plot=False,obstacles=obstacles)
+#                 freePath = True
+#                 if not(storeModel):
+#                     freePath = False
+#                     print(f'Sample number {i} trajectory has a collision!')
+#                 
+#                 if freePath == True:
+#                     Node_inst = Node(q)
+#                     Node_inst.parent = parent_node
+#                     Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent.q,q)
+#                     NodeList.append(Node_inst)
+#                     print(f'Sample number {i} config has been added to the tree!')
+#                     #plotConfig(ax, q, collision=False)
+#                     plotPath(ax, q,Node_inst.parent.q, Node_inst,collision=False)
+#                     if savefigs:
+#                         plt.savefig("figs/tree/"+str(n_treefig))
+#                         n_treefig += 1
+#                     break
+#                 else:
+#                     nearest_nodes.remove(parent_index) # remove the best candidate from the nearest_nodes
+#                     # and check the next one
+# =============================================================================
+
             # Check if any of the nearby nodes need to be updated due to the new node:
             # Reuse nearest_nodes since the only ones removed had collision to the new node
             for nearest_node in nearest_nodes:
@@ -652,24 +696,33 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                         # original cost - update it
                         NodeList[nearest_node].parent = NodeList[-1]
                         NodeList[nearest_node].cost = dist + NodeList[-1].cost
+                        # Clear the plot for the previous path and add the new path
+                        clearVisNode(NodeList[nearest_node])
+                        plotPath(ax, NodeList[nearest_node].q,NodeList[nearest_node].parent.q, NodeList[nearest_node],collision=False,show=False)
                         # Recursively change the cost of each leaf of the reconnected node
                         changeLeavesCost(NodeList[nearest_node],NodeList)
                         
-                        # Draw the new tree
-                        plt.cla()
-                        draw_room(ax, obstacles)
-                        ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
-                        ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
-                        ax.add_patch(plt.Circle(goal_end[0:2],0.2,color='green'))
-                        ax.plot([goal_end[0],goal_end[0]+np.cos(goal_end[2])],[goal_end[1],goal_end[1]+np.sin(goal_end[2])],'-g')
-                        for j in range(1,len(NodeList)):
-                            plotPath(ax, NodeList[j].q, NodeList[j].parent.q,show=False)
+# =============================================================================
+#                         # Draw the new tree
+#                         plt.cla()
+#                         draw_room(ax, obstacles)
+#                         visPath.append(ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False)))
+#                         visPath.append(ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False)))
+#                         visPath.append(ax.add_patch(plt.Circle(goal_end[0:2],0.2,color='green')))
+#                         visPath.append(ax.plot([goal_end[0],goal_end[0]+np.cos(goal_end[2])],[goal_end[1],goal_end[1]+np.sin(goal_end[2])],'-g'))
+#                         for j in range(1,len(NodeList)):
+#                             plotPath(ax, NodeList[j].q, NodeList[j].parent.q,visPath,show=False)
+# =============================================================================
                         plt.show()
                         if savefigs:
                             plt.savefig("figs/tree/"+str(n_treefig))
                             n_treefig += 1
                         
-        
+        else:
+            Node_inst = Node(q)
+            print(f'Sample number {i} config has a collision!')
+            plotConfig(ax,Node_inst.q,Node_inst, collision=True)
+            clearVisNode(Node_inst)
         # CHECK THE GOAL CONDITION:
         
         # if the goal is close to the last added node        
@@ -714,8 +767,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
         # Draw final path and intermediate configs
         for n in range(len(path)-1):
             ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
-            plotConfig(ax, path[n].q,False,r)
-        plotConfig(ax, path[-1].q,False,r)
+            plotConfig(ax, path[n].q,path[n],False,r)
+        plotConfig(ax, path[-1].q,path[-1],False,r)
         plt.show()
         plt.pause(0.001)
         if savefigs:
