@@ -310,7 +310,7 @@ def plotConfig(ax, q, collision = False, r = None, show = True):
         ax.plot([q[0],j1[0],j2[0]],[q[1],j1[1],j2[1]],'k')
     if show:    
         plt.show()
-    plt.pause(0.001)
+    plt.pause(0.000001)
 
 
 def plotPath(ax, q1, q2, collision = False,show=True):
@@ -352,6 +352,7 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     np.random.seed(2)
         
     NodeList = []
+    goalNode_index = None
     r = Robot()
     
     # Draw room
@@ -403,16 +404,21 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
                     closest_idx = idx
             
             # Now we have q1 and q2
-            storeModel,r = steeringFunction(NodeList[closest_idx].q,q)
-            for n in range(len(storeModel)):
-                if collisionFree(r,storeModel[n],obstacles)==0:                    
-                    freePath = False
-                    print(f'Sample number {i} trajectory has a collision!')
-                    plotPath(ax, q, NodeList[closest_idx].q, collision=True)
-                    #plotTrajectory(ax, np.array(storeModel), collision=True, r=r)
+            storeModel,r = steeringFunction(NodeList[closest_idx].q,q,plot=False,obstacles=obstacles)
+            freePath = True
+            if not(storeModel): #storeModel empty due to some collision
+                freePath = False
+                print(f'Sample number {i} trajectory has a collision!')
+                
+            # for n in range(len(storeModel)):
+            #     if collisionFree(r,storeModel[n],obstacles)==0:                    
+            #         freePath = False
+            #         print(f'Sample number {i} trajectory has a collision!')
+            #         plotPath(ax, q, NodeList[closest_idx].q, collision=True)
+            #         #plotTrajectory(ax, np.array(storeModel), collision=True, r=r)
 
-                    break
-                freePath = True
+            #         break
+            #     freePath = True
                 
             if freePath == True:
                 Node_inst = Node(q)
@@ -428,13 +434,17 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
         # if the goal is close to the last added node        
         #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
         # Define path from last added node to goal:
-        storeModel,r = steeringFunction(NodeList[-1].q,goal)
+        storeModel,r = steeringFunction(NodeList[-1].q,goal,plot=False,obstacles=obstacles)
         # Check if path is free:
-        for n in range(len(storeModel)):
-            if collisionFree(r,storeModel[n],obstacles)==0:
-                freePath = False
-                break
-            freePath = True
+        freePath = True
+        if not(storeModel): #storeModel empty due to some collision
+            freePath = False
+            
+        # for n in range(len(storeModel)):
+        #     if collisionFree(r,storeModel[n],obstacles)==0:
+        #         freePath = False
+        #         break
+        #     freePath = True
             
         if freePath == True:
             print(f'Sample number {i} has a path to goal!')
@@ -442,37 +452,43 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
             Node_inst = Node(goal)
             Node_inst.parent = NodeList[-1]
             NodeList.append(Node_inst)
+            goalNode_index = len(NodeList)-1
             break
-
-    # Get path from tree
-    currentNode = NodeList[-1]
-    path = []
-    path.append(NodeList[-1])
-    while currentNode != NodeList[0]:
-        path.append(currentNode.parent)
-        currentNode = currentNode.parent
-    path= path[::-1]
     
-    # Draw final path and intermediate configs
-    for n in range(len(path)-1):
-        ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
-        plotConfig(ax, path[n].q,False,r)
-    plt.show()
-    plt.pause(0.001)
-
-    # New plot for final trajectory
-    fig2, ax2 = plt.subplots()
-    ax2.set_aspect('equal','box')
-    ax2.set_xlim([0, room_width])
-    ax2.set_ylim([0, room_height])
-
-    # Animate the final trajectory
-    for n in range(len(path)-1):
-        traj,r = steeringFunction(path[n].q,path[n+1].q)
-        for traj_q in traj:
-            plt.cla()
-            draw_room(ax2, obstacles)
-            plotConfig(ax2, traj_q, collision=False, r=r)
+    if goalNode_index == None:
+        print('No path to goal found')
+    else:
+        print('Path to goal found')
+        # Get path from tree
+        currentNode = NodeList[-1]
+        path = []
+        path.append(NodeList[-1])
+        while currentNode != NodeList[0]:
+            path.append(currentNode.parent)
+            currentNode = currentNode.parent
+        path= path[::-1]
+        
+        # Draw final path and intermediate configs
+        for n in range(len(path)-1):
+            ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')
+            plotConfig(ax, path[n].q,False,r)
+        plotConfig(ax, path[-1].q,False,r)
+        plt.show()
+        plt.pause(0.001)
+    
+        # New plot for final trajectory
+        fig2, ax2 = plt.subplots()
+        ax2.set_aspect('equal','box')
+        ax2.set_xlim([0, room_width])
+        ax2.set_ylim([0, room_height])
+    
+        # Animate the final trajectory
+        for n in range(len(path)-1):
+            traj,r = steeringFunction(path[n].q,path[n+1].q)
+            for traj_q in traj:
+                plt.cla()
+                draw_room(ax2, obstacles)
+                plotConfig(ax2, traj_q, collision=False, r=r)
 
     return NodeList
 

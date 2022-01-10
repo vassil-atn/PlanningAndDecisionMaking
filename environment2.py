@@ -78,8 +78,8 @@ room_height = 20
 start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=1)
 
 # Run RRT
-NodeList = rrt.RRT_star(start, goal_end, room_width, room_height, 70, obstacles)
-
+NodeList = rrt.RRT_star(start, goal_end, room_width, room_height, 80, obstacles)
+#NodeList = rrt.RRT(start, goal_end, room_width, room_height, 1000, obstacles)
 
 
     
