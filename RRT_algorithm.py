@@ -366,7 +366,7 @@ def clearVisNode(Node_inst):
 def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
     
     # Init seed for repeatability
-    np.random.seed(8)
+    np.random.seed(2)
         
     NodeList = []
     goalNode_index = None
@@ -534,7 +534,7 @@ def pathCollisionFree(q1, q2, obstacles):
 def findNearestNodes(q,NodeList):
     nearest_nodes = []
     # Define the radius in which to check for more optimal paths 
-    radius = 10 # TODO - change to minimum needed for optimal?
+    radius = 20 # TODO - change to minimum needed for optimal?
     for idx,node in enumerate(NodeList):
         if findDistance(node.q,q) < radius:
             nearest_nodes.append(idx)
@@ -566,7 +566,7 @@ def changeLeavesCost(rewired_node,NodeList):
 def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     
     # Init seed for repeatability
-    np.random.seed(8)
+    np.random.seed(2)
     
     NodeList = []
     goalNode_index = None
@@ -643,6 +643,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                             
             if freePath == True:
                 Node_inst.parent = NodeList[closest_idx]
+                Node_inst.cost = NodeList[closest_idx].cost + best_distance
                 #NodeList.append(Node_inst)
                 print(f'Sample number {i} added to tree!')
                 plotPath(ax, q, NodeList[closest_idx].q, Node_inst, collision=False)
@@ -792,7 +793,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
             for traj_q in traj:
                 plt.cla()
                 draw_room(ax2, obstacles)
-                plotConfig(ax2, traj_q, collision=False, r=r)
+                plotConfig(ax2, traj_q, Node(traj_q),collision=False, r=r)
                 if savefigs:
                     n_animfig += 1
                     if(n_animfig%10 == 0):
