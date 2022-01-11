@@ -75,16 +75,15 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
 # Initialise room with obstacles and start/goal
 room_width = 30
 room_height = 20
-start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=2)
+start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=21)
 
 # Run RRT
 start_time = time.time()
-NodeList = rrt.RRT_star(start, goal_end, room_width, room_height, 40, obstacles,debug=True)
+NodeList,goalNode_index = rrt.RRT_star(start, goal_end, room_width, room_height, 500, obstacles,debug=True)
 end_time = time.time()
 elapsed_time = end_time - start_time
 print(elapsed_time)
 #NodeList = rrt.RRT(start, goal_end, room_width, room_height, 1000, obstacles)
-
 
 
     
