@@ -3,6 +3,8 @@ from robotModel import Robot
 from collision_detection import checkPolysIntersecting, checkPolyCircleIntersecting
 import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
+from time import process_time
+
 savefigs = False
 
 class Node:
@@ -387,6 +389,8 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
     draw_room(ax, obstacles)
     ax.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
     ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+    ax.set_xlabel('X axis (metres) ')
+    ax.set_ylabel('Y axis (metres) ')
     plt.show()
     
     # First add the starting node:
@@ -405,10 +409,13 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
     mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
     goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
     plotConfig(ax,goal,Node_inst, False,r)
-    
+    t1_start = process_time() 
     for i in range(0,N):
-
         print(f'Running sample number {i}')
+        if i == 0:
+            t1_stop = t1_start
+        el_time = round(t1_stop - t1_start,2)
+        ax.set_title(f'Sample number: {i}, Elapsed time: {el_time}')
         best_distance = float('inf')
         # Pick a random point in C-space
         q = np.array([np.random.uniform(0,room_width),
@@ -499,7 +506,9 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
                     clearVisNode(NodeList[goalNode_index])
                     plotConfig(ax, Node_inst.q, NodeList[goalNode_index],collision=False,r=r)
                     plotPath(ax, NodeList[-1].q, NodeList[goalNode_index].q, NodeList[goalNode_index], collision = False)
-    
+        
+        t1_stop = process_time()
+        
     if goalNode_index == None:
         print('No path to goal found')
     else:
@@ -617,6 +626,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
     ax.add_patch(plt.Circle(goal_end[0:2],0.2,color='green'))
     ax.plot([goal_end[0],goal_end[0]+np.cos(goal_end[2])],[goal_end[1],goal_end[1]+np.sin(goal_end[2])],'-g')
     plotConfig(ax, start, Node(start), collision=False,r=r)
+    ax.set_xlabel('X axis (metres) ')
+    ax.set_ylabel('Y axis (metres) ')
     plt.show()
     
     # Define goal configuration based on end effector target 
@@ -632,13 +643,19 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
     mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
     goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
     
-   
+
     # First add the starting node:
     Node_inst = Node(start)
     NodeList.append(Node_inst)
-    
+    t1_start = process_time() 
     for i in range(0,N):
+        
         print(f'Running sample number {i}')
+        if i == 0:
+            t1_stop = t1_start
+        el_time = round(t1_stop - t1_start,2)
+        ax.set_title(f'Sample number: {i}, Elapsed time: {el_time}')
+
         best_distance = float('inf')
         # Pick a random point in C-space
         q = np.array([np.random.uniform(0,room_width),
@@ -785,7 +802,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
                     clearVisNode(NodeList[goalNode_index])
                     plotConfig(ax, NodeList[goalNode_index].q, NodeList[goalNode_index],collision=False,r=r)
                     plotPath(ax, NodeList[-1].q, NodeList[goalNode_index].q, NodeList[goalNode_index], collision = False)
-
+        t1_stop = process_time()
+                    
     if goalNode_index == None:
         print('No path to goal found')
     else:
