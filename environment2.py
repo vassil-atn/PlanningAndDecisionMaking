@@ -86,7 +86,6 @@ print(elapsed_time)
 #NodeList = rrt.RRT(start, goal_end, room_width, room_height, 1000, obstacles)
 
 
-
     
     
     

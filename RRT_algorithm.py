@@ -128,7 +128,7 @@ def steeringFunction(q_init,q_des,plot=False,obstacles=None,phi_desired=True):
     
     if collision_free: # if mobile base won't collide (the arms might still collide)
         # PID CONTROLLER:
-        Kp = 10
+        Kp = 15
         Ki = 0.5
         Kd = 0.1
     
@@ -234,11 +234,6 @@ def steeringFunction(q_init,q_des,plot=False,obstacles=None,phi_desired=True):
             # Save error for the derivative controller
             prev_error = error
         
-# =============================================================================
-#         if plot==True:
-#             # Visualize the movement
-#             visualizeMovement(r)
-# =============================================================================
         
     return storeModel,r
 
@@ -375,7 +370,7 @@ def clearVisNode(Node_inst):
 def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
     
     # Init seed for repeatability
-    np.random.seed(2)
+    np.random.seed(0)
         
     NodeList = []
     goalNode_index = None
