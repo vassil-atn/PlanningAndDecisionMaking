@@ -79,7 +79,7 @@ start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_s
 
 # Run RRT
 start_time = time.time()
-NodeList,goalNode_index = rrt.RRT_star(start, goal_end, room_width, room_height, 500, obstacles,debug=True)
+NodeList,goalNode_index = rrt.RRT(start, goal_end, room_width, room_height, 300, obstacles,debug=True)
 end_time = time.time()
 elapsed_time = end_time - start_time
 print(elapsed_time)

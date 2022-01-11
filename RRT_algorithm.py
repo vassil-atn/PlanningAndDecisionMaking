@@ -370,7 +370,7 @@ def clearVisNode(Node_inst):
 def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
     
     # Init seed for repeatability
-    np.random.seed(2)
+    np.random.seed(0)
         
     NodeList = []
     goalNode_index = None
