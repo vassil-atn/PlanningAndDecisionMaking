@@ -512,10 +512,14 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
             path.append(currentNode.parent)
             currentNode = currentNode.parent
         path= path[::-1]
+        distance = 0
+        for i in range(1,len(path)):
+            distance = distance + findDistance(path[i-1].q, path[i].q)
+        print(f'Final cost is: {distance}')
         
         # Draw final path and intermediate configs
         for n in range(len(path)-1):
-            ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green')[0]
+            ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green',lw=3)[0]
             plotConfig(ax, path[n].q,path[n],False,r)
         plotConfig(ax, path[-1].q, path[-1],False,r)
         plt.show()
@@ -791,6 +795,10 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
             currentNode = currentNode.parent
         path= path[::-1]
         
+        distance = 0
+        for i in range(1,len(path)):
+            distance = distance + findDistance(path[i-1].q, path[i].q)
+        print(f'Final cost is: {distance}')
         # Draw final path and intermediate configs
         for n in range(len(path)-1):
             ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green',lw=3)
