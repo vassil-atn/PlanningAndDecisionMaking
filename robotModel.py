@@ -53,7 +53,8 @@ class Robot:
             
             joint_1 = mp + R.dot(np.array([self.l[0]*np.cos(q[3]),self.l[0]*np.sin(q[3])]))
             # 
-            joint_2 = mp + R.dot(np.array([self.l[0]*np.cos(q[3]) + self.l[1]*np.cos(q[3]+q[4]),self.l[0]*np.sin(q[3]) + self.l[1]*np.sin(q[3]+q[4])]))
+            l_2 = self.l[1]-0.25
+            joint_2 = mp + R.dot(np.array([self.l[0]*np.cos(q[3]) + l_2*np.cos(q[3]+q[4]),self.l[0]*np.sin(q[3]) + l_2*np.sin(q[3]+q[4])]))
             
             
             return mp,p_centre1,p_centre2,joint_1,joint_2
