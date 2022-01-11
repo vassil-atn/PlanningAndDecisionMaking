@@ -58,47 +58,49 @@ def integrateNumerically(r,mp_dot,phi_dot,dq,dt):
     return mp,phi,q,p,theta,p_joint_1
 
 
-def visualizeMovement(r):
-    plt.cla()
-    # plt.xlim([-10,10])
-    # plt.ylim([-10,10])
-    #plt.axis('equal')
-    ax = plt.gca()
-    ax.set_aspect('equal', adjustable='box')
-    # Plot the body of the robot:
-    robotBody = plt.Circle((r.mp[0], r.mp[1]), r.R, color='r',fill=False)
-    plt.plot([r.mp[0],r.mp[0]+1.5*np.cos(r.phi)],[r.mp[1],r.mp[1]+1.5*np.sin(r.phi)],color='k')
-    ax.add_patch(robotBody)
-    # Plot link 1:
-    plt.plot([r.mp[0],r.p_joint_1[0]],[r.mp[1],r.p_joint_1[1]],color='orange')
-    plt.plot(r.p_joint_1[0],r.p_joint_1[1],'.',color='k')
-    
-    # Plot link 2:
-    plt.plot([r.p_joint_1[0],r.p[0]],[r.p_joint_1[1],r.p[1]],color='orange')
-    # Add the gripper
-    angle = np.rad2deg(r.theta)
-    gripper = Arc((r.p[0]+0.25*np.cos(r.theta), r.p[1]+0.25*np.sin(r.theta)),0.5,0.5,angle+90,0,180, color='r')
-    ax.add_patch(gripper)
-    
-    base_box,polygon1,polygon2 = collisionBox(r, np.array([r.mp[0],r.mp[1],r.phi,r.q[0],r.q[1]]))
-    base_x,base_y = base_box.exterior.xy
-    plt.plot(base_x,base_y,'g')
-    x1,y1 = polygon1.exterior.xy
-    x2,y2 = polygon2.exterior.xy
-    
-    poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
-    poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
-    poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
-    
-    
-    plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
-    plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
-    plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
-            
-    plt.plot(x1,y1)
-    plt.plot(x2,y2)
-    plt.grid()
-    plt.pause(0.001)
+# =============================================================================
+# def visualizeMovement(r):
+#     plt.cla()
+#     # plt.xlim([-10,10])
+#     # plt.ylim([-10,10])
+#     #plt.axis('equal')
+#     ax = plt.gca()
+#     ax.set_aspect('equal', adjustable='box')
+#     # Plot the body of the robot:
+#     robotBody = plt.Circle((r.mp[0], r.mp[1]), r.R, color='r',fill=False)
+#     plt.plot([r.mp[0],r.mp[0]+1.5*np.cos(r.phi)],[r.mp[1],r.mp[1]+1.5*np.sin(r.phi)],color='k')
+#     ax.add_patch(robotBody)
+#     # Plot link 1:
+#     plt.plot([r.mp[0],r.p_joint_1[0]],[r.mp[1],r.p_joint_1[1]],color='orange')
+#     plt.plot(r.p_joint_1[0],r.p_joint_1[1],'.',color='k')
+#     
+#     # Plot link 2:
+#     plt.plot([r.p_joint_1[0],r.p[0]],[r.p_joint_1[1],r.p[1]],color='orange')
+#     # Add the gripper
+#     angle = np.rad2deg(r.theta)
+#     gripper = Arc((r.p[0]+0.25*np.cos(r.theta), r.p[1]+0.25*np.sin(r.theta)),0.5,0.5,angle+90,0,180, color='r')
+#     ax.add_patch(gripper)
+#     
+#     base_box,polygon1,polygon2 = collisionBox(r, np.array([r.mp[0],r.mp[1],r.phi,r.q[0],r.q[1]]))
+#     base_x,base_y = base_box.exterior.xy
+#     plt.plot(base_x,base_y,'g')
+#     x1,y1 = polygon1.exterior.xy
+#     x2,y2 = polygon2.exterior.xy
+#     
+#     poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
+#     poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
+#     poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
+#     
+#     
+#     plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
+#     plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
+#     plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
+#             
+#     plt.plot(x1,y1)
+#     plt.plot(x2,y2)
+#     plt.grid()
+#     plt.pause(0.001)
+# =============================================================================
 
 def steeringFunction(q_init,q_des,plot=False,obstacles=None,phi_desired=True):
     storeModel = []
@@ -520,27 +522,29 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
         plotConfig(ax, path[-1].q, path[-1],False,r)
         plt.show()
         plt.pause(0.001)
-    
-        # New plot for final trajectory
-        fig2, ax2 = plt.subplots()
-        ax2.set_aspect('equal','box')
-        ax2.set_xlim([0, room_width])
-        ax2.set_ylim([0, room_height])
-    
-        # Animate the final trajectory
-        for n in range(len(path)-1):
-            if n==0:
-                traj,r = steeringFunction(path[n].q,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
-                last_config = traj[-1]
-            elif n>0 and n<len(path)-1-1:
-                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
-                last_config = traj[-1]
-            else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
-                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
-            for traj_q in traj:
-                plt.cla()
-                draw_room(ax2, obstacles)
-                plotConfig(ax2, traj_q,Node(traj_q), collision=False, r=r)
+        
+# =============================================================================
+#         # New plot for final trajectory
+#         fig2, ax2 = plt.subplots()
+#         ax2.set_aspect('equal','box')
+#         ax2.set_xlim([0, room_width])
+#         ax2.set_ylim([0, room_height])
+#     
+#         # Animate the final trajectory
+#         for n in range(len(path)-1):
+#             if n==0:
+#                 traj,r = steeringFunction(path[n].q,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+#                 last_config = traj[-1]
+#             elif n>0 and n<len(path)-1-1:
+#                 traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+#                 last_config = traj[-1]
+#             else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
+#                 traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
+#             for traj_q in traj:
+#                 plt.cla()
+#                 draw_room(ax2, obstacles)
+#                 plotConfig(ax2, traj_q,Node(traj_q), collision=False, r=r)
+# =============================================================================
 
     return NodeList
 
@@ -630,8 +634,6 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
     NodeList.append(Node_inst)
     
     for i in range(0,N):
-        if i==30:
-            print('debug')
         print(f'Running sample number {i}')
         best_distance = float('inf')
         # Pick a random point in C-space
@@ -806,31 +808,33 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
             plt.savefig("figs/tree/"+str(n_treefig))
             n_treefig += 1
     
-        # New plot for final trajectory
-        fig2, ax2 = plt.subplots(figsize=(9,6.75))
-        ax2.set_aspect('equal','box')
-        ax2.set_xlim([0, room_width])
-        ax2.set_ylim([0, room_height])
-    
-        # Animate the final trajectory
-        n_animfig = 0
-        for n in range(len(path)-1):
-            if n==0:
-                traj,r = steeringFunction(path[n].q,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
-                last_config = traj[-1]
-            elif n>0 and n<len(path)-1-1:
-                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
-                last_config = traj[-1]
-            else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
-                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
-            for traj_q in traj:
-                plt.cla()
-                draw_room(ax2, obstacles)
-                plotConfig(ax2, traj_q, Node(traj_q),collision=False, r=r)
-                if savefigs:
-                    n_animfig += 1
-                    if(n_animfig%5 == 0):
-                        plt.savefig("figs/anim/"+str(n_animfig))
+# =============================================================================
+#         # New plot for final trajectory
+#         fig2, ax2 = plt.subplots(figsize=(9,6.75))
+#         ax2.set_aspect('equal','box')
+#         ax2.set_xlim([0, room_width])
+#         ax2.set_ylim([0, room_height])
+#     
+#         # Animate the final trajectory
+#         n_animfig = 0
+#         for n in range(len(path)-1):
+#             if n==0:
+#                 traj,r = steeringFunction(path[n].q,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+#                 last_config = traj[-1]
+#             elif n>0 and n<len(path)-1-1:
+#                 traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+#                 last_config = traj[-1]
+#             else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
+#                 traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
+#             for traj_q in traj:
+#                 plt.cla()
+#                 draw_room(ax2, obstacles)
+#                 plotConfig(ax2, traj_q, Node(traj_q),collision=False, r=r)
+#                 if savefigs:
+#                     n_animfig += 1
+#                     if(n_animfig%5 == 0):
+#                         plt.savefig("figs/anim/"+str(n_animfig))
+# =============================================================================
                     
 
     return NodeList

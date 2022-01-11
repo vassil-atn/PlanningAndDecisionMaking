@@ -24,7 +24,7 @@ class Robot:
             
             self.phi_dot = 0
             self.u_limits = 10
-            self.dq_limits = 10
+            self.dq_limits = 5
                 
     
         def rotationMatrix(self,a):
