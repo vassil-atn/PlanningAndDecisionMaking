@@ -368,7 +368,7 @@ def clearVisNode(Node_inst):
             
     Node_inst.vis = []
 
-def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None):
+def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
     
     # Init seed for repeatability
     np.random.seed(2)
@@ -587,7 +587,7 @@ def changeLeavesCost(rewired_node,NodeList):
             changeLeavesCost(node,NodeList)
         
 
-def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
+def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
     
     # Init seed for repeatability
     np.random.seed(2)
@@ -608,6 +608,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     ax.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
     ax.add_patch(plt.Circle(goal_end[0:2],0.2,color='green'))
     ax.plot([goal_end[0],goal_end[0]+np.cos(goal_end[2])],[goal_end[1],goal_end[1]+np.sin(goal_end[2])],'-g')
+    plotConfig(ax, start, Node(start), collision=False,r=r)
     plt.show()
     
     # Define goal configuration based on end effector target 
@@ -629,7 +630,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
     NodeList.append(Node_inst)
     
     for i in range(0,N):
-
+        if i==30:
+            print('debug')
         print(f'Running sample number {i}')
         best_distance = float('inf')
         # Pick a random point in C-space
@@ -684,7 +686,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                     freePath = True
                     if not(storeModel):
                         freePath = False
-                        print(f'Sample number {i} trajectory has a collision!')
+                        if debug:
+                            print(f'Sample number {i} trajectory has a collision!')
                     
                     if freePath == True:
                         if closest_idx != parent_index:
@@ -716,7 +719,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                             freePath = False
                             
                         if freePath == True:
-                            print("REWIRING NODE")
+                            if debug:
+                                print("REWIRING NODE")
                             # If the cost through the new node to some nearest node is lower than that node's
                             # original cost - update it
                             NodeList[nearest_node].parent = NodeList[-1]
@@ -773,7 +777,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None):
                     NodeList[goalNode_index].cost = dist + NodeList[-1].cost
                     print(f'UPDATED GOAL COST: {NodeList[goalNode_index].cost}')
                     clearVisNode(NodeList[goalNode_index])
-                    plotConfig(ax, Node_inst.q, NodeList[goalNode_index],collision=False,r=r)
+                    plotConfig(ax, NodeList[goalNode_index].q, NodeList[goalNode_index],collision=False,r=r)
                     plotPath(ax, NodeList[-1].q, NodeList[goalNode_index].q, NodeList[goalNode_index], collision = False)
 
     if goalNode_index == None:
