@@ -79,11 +79,17 @@ start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_s
 
 # Run RRT
 start_time = time.time()
-NodeList = rrt.RRT_star(start, goal_end, room_width, room_height, 500, obstacles,debug=True)
+#
+#
+# Choose RRT or RRT* based on which line runs (below):
+n_samples = 200
+NodeList = rrt.RRT(start, goal_end, room_width, room_height, n_samples, obstacles,debug=True)
+#NodeList = rrt.RRT_star(start, goal_end, room_width, room_height, n_samples, obstacles,debug=True)
+#
+#
 end_time = time.time()
 elapsed_time = end_time - start_time
 print(elapsed_time)
-#NodeList = rrt.RRT(start, goal_end, room_width, room_height, 1000, obstacles)
 
 
     

@@ -850,33 +850,31 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
         ax2.set_xlim([0, room_width])
         ax2.set_ylim([0, room_height])
     
-# =============================================================================
-#         # Animate the final trajectory
-#         n_animfig = 0
-#         for n in range(len(path)-1):
-#             if n==0:
-#                 traj,r = steeringFunction(path[n].q,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
-#                 last_config = traj[-1]
-#             elif n>0 and n<len(path)-1-1:
-#                 traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
-#                 last_config = traj[-1]
-#             else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
-#                 traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
-#                 #traj = traj[::5]
-#             for traj_q in traj:
-#                 plt.cla()
-#                 draw_room(ax2, obstacles)
-#                 for n in range(len(path)-1):
-#                     ax2.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green',lw=2)
-#                     ax2.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
-#                     ax2.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
-#                     ax2.add_patch(plt.Circle(goal_end[0:2],0.2,color='green'))
-#                     ax2.plot([goal_end[0],goal_end[0]+np.cos(goal_end[2])],[goal_end[1],goal_end[1]+np.sin(goal_end[2])],'-g')
-#                 plotConfig(ax2, traj_q, Node(traj_q),collision=False, r=r)
-#                 if savefigs:
-#                     n_animfig += 1
-#                     plt.savefig("figs/anim/"+str(n_animfig))
-# =============================================================================
+        # Animate the final trajectory
+        n_animfig = 0
+        for n in range(len(path)-1):
+            if n==0:
+                traj,r = steeringFunction(path[n].q,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+                last_config = traj[-1]
+            elif n>0 and n<len(path)-1-1:
+                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=False)
+                last_config = traj[-1]
+            else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
+                traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
+                #traj = traj[::5]
+            for traj_q in traj:
+                plt.cla()
+                draw_room(ax2, obstacles)
+                for n in range(len(path)-1):
+                    ax2.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green',lw=2)
+                    ax2.add_patch(plt.Circle(start[0:2],2.5,color='red',fill=False))
+                    ax2.add_patch(plt.Circle(goal_end[0:2],2.5,color='green',fill=False))
+                    ax2.add_patch(plt.Circle(goal_end[0:2],0.2,color='green'))
+                    ax2.plot([goal_end[0],goal_end[0]+np.cos(goal_end[2])],[goal_end[1],goal_end[1]+np.sin(goal_end[2])],'-g')
+                plotConfig(ax2, traj_q, Node(traj_q),collision=False, r=r)
+                if savefigs:
+                    n_animfig += 1
+                    plt.savefig("figs/anim/"+str(n_animfig))
                     
 
     return NodeList
