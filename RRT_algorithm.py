@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Arc
 from time import process_time
 
-savefigs = False
+savefigs = False # If set to true, will output visualisation pngs to ./figs/tree and ./figs/anim
 
 class Node:
     def __init__(self,q,cost=0):
@@ -28,7 +28,6 @@ def HaarMeasure(angle1,angle2):
 def findDistance(q1,q2):
     # Use Haar Measure for the angles:
     distance = np.linalg.norm(q1[0:2] - q2[0:2]) + HaarMeasure(q1[2],q2[2]) + HaarMeasure(q1[3],q2[3]) + HaarMeasure(q1[4],q2[4]) 
-    
     return distance
 
 
@@ -59,50 +58,6 @@ def integrateNumerically(r,mp_dot,phi_dot,dq,dt):
     
     return mp,phi,q,p,theta,p_joint_1
 
-
-# =============================================================================
-# def visualizeMovement(r):
-#     plt.cla()
-#     # plt.xlim([-10,10])
-#     # plt.ylim([-10,10])
-#     #plt.axis('equal')
-#     ax = plt.gca()
-#     ax.set_aspect('equal', adjustable='box')
-#     # Plot the body of the robot:
-#     robotBody = plt.Circle((r.mp[0], r.mp[1]), r.R, color='r',fill=False)
-#     plt.plot([r.mp[0],r.mp[0]+1.5*np.cos(r.phi)],[r.mp[1],r.mp[1]+1.5*np.sin(r.phi)],color='k')
-#     ax.add_patch(robotBody)
-#     # Plot link 1:
-#     plt.plot([r.mp[0],r.p_joint_1[0]],[r.mp[1],r.p_joint_1[1]],color='orange')
-#     plt.plot(r.p_joint_1[0],r.p_joint_1[1],'.',color='k')
-#     
-#     # Plot link 2:
-#     plt.plot([r.p_joint_1[0],r.p[0]],[r.p_joint_1[1],r.p[1]],color='orange')
-#     # Add the gripper
-#     angle = np.rad2deg(r.theta)
-#     gripper = Arc((r.p[0]+0.25*np.cos(r.theta), r.p[1]+0.25*np.sin(r.theta)),0.5,0.5,angle+90,0,180, color='r')
-#     ax.add_patch(gripper)
-#     
-#     base_box,polygon1,polygon2 = collisionBox(r, np.array([r.mp[0],r.mp[1],r.phi,r.q[0],r.q[1]]))
-#     base_x,base_y = base_box.exterior.xy
-#     plt.plot(base_x,base_y,'g')
-#     x1,y1 = polygon1.exterior.xy
-#     x2,y2 = polygon2.exterior.xy
-#     
-#     poly1 = Polygon([np.array([1,1]),np.array([1,2]),np.array([2,2]),np.array([2,1])])
-#     poly2 = Polygon([np.array([3,3]),np.array([4,3]),np.array([4,4]),np.array([3,4])])
-#     poly3 = Polygon([np.array([7,7]),np.array([8,7]),np.array([8,8]),np.array([7,8])])
-#     
-#     
-#     plt.plot(poly1.exterior.xy[0],poly1.exterior.xy[1])
-#     plt.plot(poly2.exterior.xy[0],poly2.exterior.xy[1])
-#     plt.plot(poly3.exterior.xy[0],poly3.exterior.xy[1])
-#             
-#     plt.plot(x1,y1)
-#     plt.plot(x2,y2)
-#     plt.grid()
-#     plt.pause(0.001)
-# =============================================================================
 
 def steeringFunction(q_init,q_des,plot=False,obstacles=None,phi_desired=True):
     storeModel = []
@@ -357,6 +312,7 @@ def draw_room(win, obstacles):
         win.add_patch(obs)
     return
 
+
 def clearVisNode(Node_inst):
     plt.pause(0.1)
     try:
@@ -366,6 +322,7 @@ def clearVisNode(Node_inst):
             el.remove()
             
     Node_inst.vis = []
+
 
 def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
     
@@ -518,7 +475,7 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
         print('Path to goal found')
         # Get path from tree
         print('Goal node index is: '+str(goalNode_index))
-        print(NodeList[goalNode_index].cost)
+        print('Final cost is: ', NodeList[goalNode_index].cost)
         currentNode = NodeList[goalNode_index]
         path = []
         path.append(currentNode)
@@ -527,9 +484,6 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
             currentNode = currentNode.parent
         path= path[::-1]
         distance = 0
-        for i in range(1,len(path)):
-            distance = distance + findDistance(path[i-1].q, path[i].q)
-        print(f'Final cost is: {distance}')
         
         # Draw final path and intermediate configs
         for n in range(len(path)-1):
@@ -556,8 +510,10 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
                 last_config = traj[-1]
             else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
                 traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
-                traj = traj[::5]
-            for traj_q in traj:
+            # Only animate every 5th config (plus last frame)
+            traj_anim = traj[::5]  
+            traj_anim.append(traj[-1]) 
+            for traj_q in traj_anim:
                 plt.cla()
                 draw_room(ax2, obstacles)
                 for n in range(len(path)-1):
@@ -641,7 +597,6 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
     plt.show()
     
     # Define goal configuration based on end effector target 
-    # TODO - check for collision (remove requirement that obstacles aren't created 2m around goal)
     # Robot is redundant so 2dof can be selected randomly
     j1_g = np.random.uniform(0,2*np.pi)
     j2_g = np.random.uniform(0,2*np.pi)
@@ -684,7 +639,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
                 nearest_nodes.remove(goalNode_index)
                 
                 
-            # Find closest vertix in V 
+            # Find closest vertex in V 
             for idx, node in enumerate(NodeList):
                 distance = findDistance(node.q,q)
                 if distance < best_distance:
@@ -698,8 +653,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
                 freePath = False
                 clearVisNode(Node_inst)
                 print(f'Sample number {i} trajectory has a collision!')
-                   
-                            
+                                               
             if freePath == True:
                 Node_inst.parent = NodeList[closest_idx]
                 Node_inst.cost = NodeList[closest_idx].cost + best_distance
@@ -727,7 +681,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
                             Node_inst.parent = parent_node
                             Node_inst.cost = Node_inst.parent.cost + findDistance(Node_inst.parent.q,q)
                             clearVisNode(Node_inst)
-                      #      NodeList.append(Node_inst)
+                            #NodeList.append(Node_inst)
                       
                             print('Path has been rewired!')
                             plotConfig(ax, q, Node_inst,collision=False)
@@ -739,7 +693,8 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
                 if savefigs:
                     plt.savefig("figs/tree/"+str(n_treefig))
                     n_treefig += 1        
-                NodeList.append(Node_inst)        
+                NodeList.append(Node_inst)  
+                
                 # Check if any of the nearby nodes need to be updated due to the new node:
                 # Reuse nearest_nodes since the only ones removed had collision to the new node
                 for nearest_node in nearest_nodes:
@@ -787,8 +742,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
             print(f'Sample number {i} config has a collision!')
             plotConfig(ax,Node_inst.q,Node_inst, collision=True)
             clearVisNode(Node_inst)  
-
-                  
+             
         if freePath == True:
             print(f'Sample number {i} has a path to goal!')
             # If it's the first time we reached the goal, connect it to the new node
@@ -820,7 +774,7 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
         print('Path to goal found')
         # Get path from tree
         print('Goal node index is: '+str(goalNode_index))
-        print(NodeList[goalNode_index].cost)
+        print('Final cost is: ', NodeList[goalNode_index].cost)
         currentNode = NodeList[goalNode_index]
         path = []
         path.append(currentNode)
@@ -829,10 +783,6 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
             currentNode = currentNode.parent
         path= path[::-1]
         
-        distance = 0
-        for i in range(1,len(path)):
-            distance = distance + findDistance(path[i-1].q, path[i].q)
-        print(f'Final cost is: {distance}')
         # Draw final path and intermediate configs
         for n in range(len(path)-1):
             ax.plot([path[n].q[0],path[n+1].q[0]],[path[n].q[1],path[n+1].q[1]],color='green',lw=3)
@@ -861,8 +811,10 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
                 last_config = traj[-1]
             else: # n==len(path)-1-1: # if n corresponds to the last iteration (from penultimate node to goal node)
                 traj,r = steeringFunction(last_config,path[n+1].q,plot=False,obstacles=None,phi_desired=True)
-                #traj = traj[::5]
-            for traj_q in traj:
+            # Only animate every 5th config (plus last frame)
+            traj_anim = traj[::5]  
+            traj_anim.append(traj[-1])
+            for traj_q in traj_anim:
                 plt.cla()
                 draw_room(ax2, obstacles)
                 for n in range(len(path)-1):

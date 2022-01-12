@@ -1,10 +1,10 @@
 from random import seed, uniform
 import numpy as np
-#import matplotlib.pyplot as plt
 import collision_detection as cd
 import RRT_algorithm as rrt
-#from robotModel import Robot
 import time
+
+
 def init_room(width=30, height=20, n_obst=20, rng_seed=None):
     
     # Init
@@ -75,7 +75,7 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
 # Initialise room with obstacles and start/goal
 room_width = 30
 room_height = 20
-start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=21)
+start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=1)
 
 # Run RRT
 start_time = time.time()
@@ -89,7 +89,7 @@ NodeList = rrt.RRT(start, goal_end, room_width, room_height, n_samples, obstacle
 #
 end_time = time.time()
 elapsed_time = end_time - start_time
-print(elapsed_time)
+print("Elapsed time: ", elapsed_time)
 
 
     
