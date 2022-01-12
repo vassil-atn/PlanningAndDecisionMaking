@@ -327,7 +327,7 @@ def clearVisNode(Node_inst):
 def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
     
     # Init seed for repeatability
-    np.random.seed(0)
+    np.random.seed(1)
         
     NodeList = []
     goalNode_index = None
@@ -349,21 +349,31 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
     plt.show()
     
     
+    # Define goal configuration based on end effector target 
+    goal_config_attempts = 1000
+    for n in range(goal_config_attempts):
+        print(f"Goal config attempt {n+1}")
+        # Robot is redundant so 2dof can be selected randomly
+        j1_g = np.random.uniform(0,2*np.pi)
+        j2_g = np.random.uniform(0,2*np.pi)
+        # Heading set to ensure correct endpoint orientation
+        phi_g = goal_end[2]-j1_g-j2_g
+        # Base position calculation
+        px_g = r.l[0]*np.cos(j1_g)+r.l[1]*np.cos(j1_g+j2_g)
+        py_g = r.l[0]*np.sin(j1_g)+r.l[1]*np.sin(j1_g+j2_g)
+        mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
+        goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
+        if collisionFree(r,goal,obstacles) == True:
+            print("Feasible goal configuration found!")
+            break
+        if n == goal_config_attempts-1:
+            print(f"No feasible goal configuration found in {goal_config_attempts} attempts.")
+            print("Try a different seed.")
+            return None
+        
     # First add the starting node:
     Node_inst = Node(start)
     NodeList.append(Node_inst)
-    
-    # Define goal configuration based on end effector target TODO - check for collision
-    # Robot is redundant so 2dof can be selected randomly
-    j1_g = np.random.uniform(0,2*np.pi)
-    j2_g = np.random.uniform(0,2*np.pi)
-    # Heading set to ensure correct endpoint orientation
-    phi_g = goal_end[2]-j1_g-j2_g
-    # Base position calculation
-    px_g = r.l[0]*np.cos(j1_g)+r.l[1]*np.cos(j1_g+j2_g)
-    py_g = r.l[0]*np.sin(j1_g)+r.l[1]*np.sin(j1_g+j2_g)
-    mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
-    goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
     plotConfig(ax,goal,Node_inst, False,r)
     t1_start = process_time() 
     for i in range(0,N):
@@ -429,8 +439,6 @@ def RRT(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=False):
             clearVisNode(Node_blocked)
             
                 
-        # if the goal is close to the last added node        
-        #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
         # Define path from last added node to goal:
         storeModel,r = steeringFunction(NodeList[-1].q,goal,plot=False,obstacles=obstacles)
         # Check if path is free:
@@ -597,21 +605,31 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
     plt.show()
     
     # Define goal configuration based on end effector target 
-    # Robot is redundant so 2dof can be selected randomly
-    j1_g = np.random.uniform(0,2*np.pi)
-    j2_g = np.random.uniform(0,2*np.pi)
-    # Heading set to ensure correct endpoint orientation
-    phi_g = goal_end[2]-j1_g-j2_g
-    # Base position calculation
-    px_g = r.l[0]*np.cos(j1_g)+r.l[1]*np.cos(j1_g+j2_g)
-    py_g = r.l[0]*np.sin(j1_g)+r.l[1]*np.sin(j1_g+j2_g)
-    mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
-    goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
-    
-
+    goal_config_attempts = 1000
+    for n in range(goal_config_attempts):
+        print(f"Goal config attempt {n+1}")
+        # Robot is redundant so 2dof can be selected randomly
+        j1_g = np.random.uniform(0,2*np.pi)
+        j2_g = np.random.uniform(0,2*np.pi)
+        # Heading set to ensure correct endpoint orientation
+        phi_g = goal_end[2]-j1_g-j2_g
+        # Base position calculation
+        px_g = r.l[0]*np.cos(j1_g)+r.l[1]*np.cos(j1_g+j2_g)
+        py_g = r.l[0]*np.sin(j1_g)+r.l[1]*np.sin(j1_g+j2_g)
+        mp_g = np.array([goal_end[0],goal_end[1]])-r.rotationMatrix(phi_g)@np.array([px_g,py_g])
+        goal = np.array([mp_g[0],mp_g[1],phi_g,j1_g,j2_g])
+        if collisionFree(r,goal,obstacles) == True:
+            print("Feasible goal configuration found!")
+            break
+        if n == goal_config_attempts-1:
+            print(f"No feasible goal configuration found in {goal_config_attempts} attempts.")
+            print("Try a different seed.")
+            return None
+        
     # First add the starting node:
     Node_inst = Node(start)
     NodeList.append(Node_inst)
+    plotConfig(ax,goal,Node_inst, False,r)
     t1_start = process_time() 
     for i in range(0,N):
         
@@ -727,8 +745,6 @@ def RRT_star(start,goal_end,room_width,room_height,N=100,obstacles=None,debug=Fa
                             
                 # CHECK THE GOAL CONDITION:
                 
-                # if the goal is close to the last added node        
-                #if (abs(findDistance(NodeList[-1].q,goal)) < 5):
                 # Define path from last added node to goal:
                 storeModel,r = steeringFunction(NodeList[-1].q,goal,plot=False,obstacles=obstacles)
                 # Check if path is free:

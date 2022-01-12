@@ -24,7 +24,7 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
     # Start - the starting robot configuration. Random y pos on LHS of room, with 0 joint angles
     startPos = np.array([uniform(wall_thk+2.5, wall_thk+7), uniform(wall_thk+2.5, height-wall_thk-2.5)])
     start = np.hstack((startPos, np.array([0.0,0.0,0.0])))
-    # Goal - the goal for the end effector (xp, py, theta)
+    # Goal - the goal for the end effector (px, py, theta)
     goal_end = np.array([uniform(width-wall_thk-2.5, width-wall_thk-7), uniform(wall_thk+2.5, height-wall_thk-2.5), uniform(0, 2*np.pi)])
     
     # Obstacles
@@ -49,10 +49,12 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
         polyClear = True
         
         # Check whether too close to start/end point
-        tooClose = cd.checkPolyCircleIntersecting(poly1, start[0], start[1], 2.5)
-        tooClose = tooClose or cd.checkPolyCircleIntersecting(poly1, goal_end[0], goal_end[1], 2.5)
+        # Obstacles should be completely clear of arm range in the start location
+        tooClose = cd.checkPolyCircleIntersecting(poly1, start[0], start[1], 2.5) 
+        # No obstacles within 0.5m of goal. Selected goal config will need to be checked to ensure it doesn't collide
+        tooClose = tooClose or cd.checkPolyCircleIntersecting(poly1, goal_end[0], goal_end[1], 1) 
         if tooClose:
-            # If too close, 
+            # If too close, poly should be discarded
             polyClear = False
 
         # For every other obstacle in current list, check for collisions
@@ -75,7 +77,7 @@ def init_room(width=30, height=20, n_obst=20, rng_seed=None):
 # Initialise room with obstacles and start/goal
 room_width = 30
 room_height = 20
-start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=1)
+start, goal_end, obstacles = init_room(room_width, room_height, n_obst=20, rng_seed=10)
 
 # Run RRT
 start_time = time.time()
